@@ -6,7 +6,8 @@ import breeze.linalg.SparseVector
 
 class Ftrl {
 
-  var n = 10
+  var n = Int.MaxValue
+  var i = 1
   var alpha:Double = 5.0
   var beta:Double = 1.0
   var lambda:Double = 0.0
@@ -15,6 +16,11 @@ class Ftrl {
   var eta : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGrad : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGradSq : SparseVector[Double] = SparseVector.zeros[Double](n)
+
+  def setVectorSize(n:Int) = {
+    this.n = n
+    this
+  }
 
   def setAlpha (alpha:Double) = {
     this.alpha = alpha
@@ -38,7 +44,8 @@ class Ftrl {
     this.cumGradSq = updatedParam._4
     this.eta = updatedParam._5
     this.z = updatedParam._6
-    this.weight
+    this.i += 1
+    this
   }
 
   def predictProb (data : SparseVector[Double]) = {

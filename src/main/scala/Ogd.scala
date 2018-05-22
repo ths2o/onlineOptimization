@@ -7,9 +7,15 @@ import breeze.linalg.SparseVector
 
 class Ogd {
 
-  var n = 10
+  var n = Int.MaxValue /*2,147,483,647*/
   var weight : SparseVector[Double] = SparseVector.zeros[Double](n)
   var i = 1
+
+
+  def setVectorSize(n:Int) = {
+    this.n = n
+    this
+  }
 
   def update(data : (Int, SparseVector[Double])) = {
     val updatedParam = Ogd.ogdUpdate(data, i, weight)
