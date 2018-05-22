@@ -40,8 +40,8 @@ object FtrlRun {
     (1 to n).map(x=> logisticSample(coef))
   }
 
-  def makeCoef() = {
-    (1 to 3).map(x=> (util.Random.nextInt(5000), rGaussian(1)(0) * 0.01 + 5)).toMap
+  def makeCoef(v:Int, r:Int) = {
+    (1 to 3).map(x=> (util.Random.nextInt(r), rGaussian(1)(0) * 0.1 + v)).toMap
   }
 
 
@@ -71,32 +71,52 @@ object FtrlRun {
     //val data = nLogisticSample(1000000, mapToSparseVector(makeCoef(), Int.MaxValue)).toArray
     //println(data.mkString("\n"))
 
-    val data = (1 to 100000).
-      map(x=> makeCoef()).
+    val data1 = (1 to 1000).
+      map(x=> makeCoef(5, 1000)).
       map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
       flatten.toArray
-    //println(data.mkString("\n"))
+
+
+    val data2 = (1 to 1000).
+      map(x=> makeCoef(5, 1000)).
+      map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
+      flatten.toArray
+
+    val data = data1.union(data2)
+    println(data.mkString("\n"))
+
+    val ss = data.map{x=>
+      val label = x._1.toString
+      val feature = x._2.array.toMap.map(k=> k._1.toString + ":"+ k._2.toString).mkString(" ")
+      "echo " + "\""+ label + " " + feature + "\"" + "| nc 127.0.0.1 8888"
+    }
+
+    println(ss.mkString("\n"))
     //val initialWeight = SparseVector.zeros[Double](coef.keys.max + 1)
     //gradientDescent(data, 10, 1, 2, initialWeight, 1, 0.00001)
 
-    val opt1 = new Ftrl().setAlpha(2).setBeta(1).setLambda(2)
-    val opt2 = new Ogd()
 
-    val opt = Array(opt1, opt2)
+    val hyperParam = Array(
+      (1, 1, 1, 0)//,  (1, 1, 3, 0)
+    )
 
+    //val opt1 = new Ftrl().setAlpha(5).setBeta(1).setL1(0.5).setL2(1)
+    //val opt2 = new Ftrl().setAlpha(5).setBeta(1)
+    //val opt2 = new Ogd()
+    //val opt = Array(opt1, opt2)
+
+    val opt = hyperParam.map(h=> new Ftrl().setAlpha(h._1).setBeta(h._2).setL1(h._3).setL2(h._4))
+
+
+    val t1 = System.currentTimeMillis()
     var i = 1
-    var correct = Array.fill(2)(0)
+    var correct = Array.fill(hyperParam.size)(0)
     data.foreach{x=>
 
-      val pred = Array(
-        opt1.predictLabel(x._2, 0.5),
-        opt2.predictLabel(x._2, 0.5)
-      )
+      val pred = opt.map(o=> o.predictLabel(x._2, 0.5))
 
-      val aa = Array(
-        opt1.update(x._1, x._2),
-        opt2.update(x._1, x._2)
-      )
+      val prob = opt.map(o=> o.predictProb(x._2))
+      val aa = opt.map(o=> o.update(x._1, x._2))
 
       val ss = pred.map{c=>
         if (c == x._1) 1 else 0
@@ -104,13 +124,18 @@ object FtrlRun {
 
       correct = correct.zip(ss).map(k => k._1 + k._2)
 
-      val gg = correct.map(k=> k.toDouble / i.toDouble).map(k=> k - (k % 0.0001))
+      val gg = correct.map(k=> k.toDouble / 1000).map(k=> k - (k % 0.0001))
 
-      if (i % 1000 == 0) println(gg.mkString("\t"), i)
+      if (i % 1000 == 0) {
+        println(gg.mkString("\t"), i)
+        correct = Array.fill(hyperParam.size)(0)
+      }
       //if (i % 1000 == 0) println(opt2.i, opt2.n, opt2.weight, i)
       i += 1
     }
 
+    val t2 = System.currentTimeMillis()
+    println(t2-t1)
 
 
 

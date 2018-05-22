@@ -11,6 +11,7 @@ class Ftrl {
   var alpha:Double = 5.0
   var beta:Double = 1.0
   var lambda:Double = 0.0
+  var lambda2:Double = 0.0
   var weight : SparseVector[Double] = SparseVector.zeros[Double](n)
   var z : SparseVector[Double] = SparseVector.zeros[Double](n)
   var eta : SparseVector[Double] = SparseVector.zeros[Double](n)
@@ -32,13 +33,18 @@ class Ftrl {
     this
   }
 
-  def setLambda (lambda:Double) = {
+  def setL1 (lambda:Double) = {
     this.lambda = lambda
     this
   }
 
+  def setL2 (lambda2:Double) = {
+    this.lambda2 = lambda2
+    this
+  }
+
   def update(data : (Int, SparseVector[Double])) = {
-    val updatedParam = Ftrl.ftrlUpdate(data, alpha, beta, lambda, weight, z, eta, cumGrad, cumGradSq)
+    val updatedParam = Ftrl.ftrlUpdate(data, alpha, beta, lambda, lambda2, weight, z, eta, cumGrad, cumGradSq)
     this.weight = updatedParam._1
     this.cumGrad = updatedParam._3
     this.cumGradSq = updatedParam._4
@@ -92,9 +98,10 @@ object Ftrl {
     //w.zip(grad.map(_ * learningRate)).map(k => k._1 - k._2)
   }
 
-  def eta(cumGradSq : SparseVector[Double], alpha:Double, beta:Double) = {
+  def eta(cumGradSq : SparseVector[Double], alpha:Double, beta:Double, lambda2:Double) = {
     val iCumGradSq = cumGradSq.copy
-    iCumGradSq.activeIterator.foreach(x=> iCumGradSq.update(x._1, alpha/(beta + math.sqrt(x._2))))
+    //iCumGradSq.activeIterator.foreach(x=> iCumGradSq.update(x._1, alpha/(beta + math.sqrt(x._2))))
+    iCumGradSq.activeIterator.foreach(x=> iCumGradSq.update(x._1, 1/((beta + math.sqrt(x._2)) / alpha + lambda2) ))
     iCumGradSq
   }
 
@@ -136,6 +143,7 @@ object Ftrl {
                        alpha:Double,
                        beta:Double,
                        lambda:Double,
+                       lambda2:Double,
                        oldWeight : SparseVector[Double],
                        oldZ : SparseVector[Double],
                        oldEta : SparseVector[Double],
@@ -144,12 +152,12 @@ object Ftrl {
                      ) = {
 
 
-    val weight = wUpdater(oldZ, oldEta, lambda)
-    val grad = gradientLL(data._1, weight, data._2)
-    val cumGrad = oldCumGrad + grad
-    val cumGradSq = oldCumGradSq + grad *:* grad
-    val newEta = eta(cumGradSq, alpha, beta)
-    val newZ = zUpdater(oldZ, grad, oldEta, newEta, weight)
+    val weight = wUpdater(oldZ, oldEta, lambda); weight.compact()
+    val grad = gradientLL(data._1, weight, data._2); grad.compact()
+    val cumGrad = oldCumGrad + grad; cumGrad.compact()
+    val cumGradSq = oldCumGradSq + grad *:* grad; cumGradSq.compact()
+    val newEta = eta(cumGradSq, alpha, beta, lambda2); newEta.compact
+    val newZ = zUpdater(oldZ, grad, oldEta, newEta, weight); newZ.compact()
 
     (weight, grad, cumGrad, cumGradSq, newEta, newZ)
 
