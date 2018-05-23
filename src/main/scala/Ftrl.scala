@@ -18,6 +18,11 @@ class Ftrl {
   var cumGrad : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGradSq : SparseVector[Double] = SparseVector.zeros[Double](n)
 
+  var nonZeroCoef : Int = 0
+  var bufferSize = 1000
+  var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
+
+
   def setVectorSize(n:Int) = {
     this.n = n
     this
@@ -44,6 +49,8 @@ class Ftrl {
   }
 
   def update(data : (Int, SparseVector[Double])) = {
+
+    val fit = fitStat(data)
     val updatedParam = Ftrl.ftrlUpdate(data, alpha, beta, lambda, lambda2, weight, z, eta, cumGrad, cumGradSq)
     this.weight = updatedParam._1
     this.cumGrad = updatedParam._3
@@ -51,6 +58,8 @@ class Ftrl {
     this.eta = updatedParam._5
     this.z = updatedParam._6
     this.i += 1
+    this.nonZeroCoef = this.weight.activeSize
+    this.buffer = if (this.buffer.size < this.bufferSize) this.buffer :+ fit else this.buffer.drop(1) :+ fit
     this
   }
 
@@ -61,6 +70,32 @@ class Ftrl {
   def predictLabel (data : SparseVector[Double], threshold:Double) ={
     if (predictProb(data) >= threshold) 1 else 0
   }
+
+
+  def fitStat (data : (Int, SparseVector[Double])) = {
+    val prob = predictProb(data._2)
+    val loss = Ftrl.logLoss(data._1, this.weight, data._2)
+    val positive = (0 to 10).map(x=> if (prob >= x.toDouble/10D) 1 else 0).toArray
+    (data._1, prob, loss, positive)
+  }
+
+  def bufferSummary(threshold : Double) ={
+    val size = buffer.size.toDouble
+    val loss = buffer.map(x=> x._3).sum / size
+    val pLabel = buffer.map(x=> if (x._2 >= threshold) 1 else 0)
+    val precision = buffer.map(x=> x._1).zip(pLabel).map(x=> if(x._1 == x._2) 1 else 0).sum.toDouble / size
+    val roc = buffer.groupBy(_._1).map{x=>
+      val aa = x._2.map(x=> x._4).reduce((a, b) => a.zip(b).map(x=> x._1 + x._2))
+      val bb = x._2.size
+      val cc = aa.map(t => t.toDouble/bb.toDouble)
+      (x._1, cc)
+    }
+    val height = roc.getOrElse(1, Array.fill(11)(0D)).drop(1).zip(roc.getOrElse(1, Array.fill(11)(0D)).dropRight(1)).map(x=> (x._1 + x._2)/2)
+    val width = roc.getOrElse(0, Array.fill(11)(0D)).dropRight(1).zip(roc.getOrElse(0, Array.fill(11)(0D)).drop(1)).map(x=> (x._1 - x._2))
+    val auc = height.zip(width).map(x=> x._1 * x._2).sum
+    (loss, precision, auc, this.nonZeroCoef)
+  }
+
 
 
 }

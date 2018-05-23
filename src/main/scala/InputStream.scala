@@ -17,8 +17,25 @@ object InputStream {
   implicit val system = ActorSystem("QuickStart")
   implicit val materializer = ActorMaterializer()
 
+  def libSvmParser(libSvm:String) = {
+    val split = libSvm.split(" +")
+    val label = split.take(1)(0) toInt
+    val feature = split.drop(1).map{s=>
+      val kv = s.split(":")
+      val (k, v) = (kv(0), kv(1))
+      (k.toInt -> v.toDouble)
+    }.toMap
+    (label, FtrlRun.mapToSparseVector(feature, Int.MaxValue))
+  }
 
   val ftrl = new Ftrl().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
+
+
+
+
+
+
+
 
 
   def main(args: Array[String]): Unit = {
@@ -36,16 +53,8 @@ object InputStream {
         maximumFrameLength = 2048,
         allowTruncation = true))
         .map{x=>
-          val split = x.utf8String.split(" +")
-          val label = split.take(1)(0) toInt
-          val feature = split.drop(1).map{s=>
-            val kv = s.split(":")
-            val (k, v) = (kv(0), kv(1))
-            (k.toInt -> v.toDouble)
-          }.toMap
-          (label, feature)
+          libSvmParser(x.utf8String)
         }
-        .map(x=> (x._1, FtrlRun.mapToSparseVector(x._2, Int.MaxValue)))
         .map{x=>
           ftrl.update(x)
           ftrl.weight.toString() + "\n"

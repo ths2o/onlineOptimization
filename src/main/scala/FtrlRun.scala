@@ -70,20 +70,26 @@ object FtrlRun {
     //val data =sampledData.union(sampledData2)
     //val data = nLogisticSample(1000000, mapToSparseVector(makeCoef(), Int.MaxValue)).toArray
     //println(data.mkString("\n"))
-
-    val data1 = (1 to 1000).
-      map(x=> makeCoef(5, 1000)).
+/*
+    val data1 = (1 to 80000).
+      map(x=> makeCoef(5, 100)).
       map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
       flatten.toArray
 
 
-    val data2 = (1 to 1000).
-      map(x=> makeCoef(5, 1000)).
+    val data2 = (1 to 20000).
+      map(x=> makeCoef(0, 10000)).
       map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
       flatten.toArray
+    */
+    val aa = (1 to 80000).map(x=> makeCoef(5, 100)) union (1 to 20000).map(x=> makeCoef(0, 100000))
 
-    val data = data1.union(data2)
-    println(data.mkString("\n"))
+    val bb = util.Random.shuffle(aa).toArray.
+      map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
+      flatten
+
+    val data = bb
+    //println(data.mkString("\n"))
 
     val ss = data.map{x=>
       val label = x._1.toString
@@ -91,13 +97,13 @@ object FtrlRun {
       "echo " + "\""+ label + " " + feature + "\"" + "| nc 127.0.0.1 8888"
     }
 
-    println(ss.mkString("\n"))
+    //println(ss.mkString("\n"))
     //val initialWeight = SparseVector.zeros[Double](coef.keys.max + 1)
     //gradientDescent(data, 10, 1, 2, initialWeight, 1, 0.00001)
 
 
     val hyperParam = Array(
-      (1, 1, 1, 0)//,  (1, 1, 3, 0)
+      (1, 1, 0, 0)//,  (1, 1, 3, 0)
     )
 
     //val opt1 = new Ftrl().setAlpha(5).setBeta(1).setL1(0.5).setL2(1)
@@ -126,8 +132,10 @@ object FtrlRun {
 
       val gg = correct.map(k=> k.toDouble / 1000).map(k=> k - (k % 0.0001))
 
+
       if (i % 1000 == 0) {
-        println(gg.mkString("\t"), i)
+        val summary = opt.map(o=> o.bufferSummary(0.5))
+        println(summary.mkString(","), i)
         correct = Array.fill(hyperParam.size)(0)
       }
       //if (i % 1000 == 0) println(opt2.i, opt2.n, opt2.weight, i)
