@@ -18,13 +18,14 @@ object InputStream {
   implicit val materializer = ActorMaterializer()
 
 
-  val ftrl = new Ftrl().setAlpha(5).setBeta(1).setL1(3).setL2(0)
+  val ftrl = new Ftrl().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
 
 
   def main(args: Array[String]): Unit = {
 
 
     //val aa = echo -n "1 0:2 3:4 5:6" | nc 127.0.0.1 8888
+    //val aa = msg   /SERVER:127.0.0.1 8888 "1 0:2 3:4 5:6"
     val connections: Source[IncomingConnection, Future[ServerBinding]] = Tcp().bind("localhost", 8888)
 
     connections runForeach { connection ⇒
@@ -32,10 +33,10 @@ object InputStream {
 
       val echo = Flow[ByteString].via(Framing.delimiter(
         ByteString("\n"),
-        maximumFrameLength = 256,
+        maximumFrameLength = 2048,
         allowTruncation = true))
         .map{x=>
-          val split = x.utf8String.split(" ")
+          val split = x.utf8String.split(" +")
           val label = split.take(1)(0) toInt
           val feature = split.drop(1).map{s=>
             val kv = s.split(":")
@@ -47,8 +48,7 @@ object InputStream {
         .map(x=> (x._1, FtrlRun.mapToSparseVector(x._2, Int.MaxValue)))
         .map{x=>
           ftrl.update(x)
-          ftrl.i.toString() + "\n"
-
+          ftrl.weight.toString() + "\n"
         }
         .map(ByteString(_))
 
