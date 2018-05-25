@@ -17,7 +17,6 @@ class Ftrl {
   var eta : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGrad : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGradSq : SparseVector[Double] = SparseVector.zeros[Double](n)
-
   var nonZeroCoef : Int = 0
   var bufferSize = 1000
   var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
