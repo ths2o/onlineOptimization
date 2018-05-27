@@ -94,10 +94,11 @@ object FtrlRun {
     val ss = data.map{x=>
       val label = x._1.toString
       val feature = x._2.array.toMap.map(k=> k._1.toString + ":"+ k._2.toString).mkString(" ")
-      "echo " + "\""+ label + " " + feature + "\"" + "| nc 127.0.0.1 8888"
+      //"echo " + "\""+ label + " " + feature + "\"" + "| nc 127.0.0.1 9999"
+      label + " " + feature
     }
 
-    //println(ss.mkString("\n"))
+    println(ss.mkString("\n"))
     //val initialWeight = SparseVector.zeros[Double](coef.keys.max + 1)
     //gradientDescent(data, 10, 1, 2, initialWeight, 1, 0.00001)
 

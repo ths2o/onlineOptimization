@@ -19,9 +19,15 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream" % "2.5.12",
   "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.12" % Test,
 
-  "org.apache.spark" %% "spark-core" % "2.0.2" % "provided",
-  "org.apache.spark" %% "spark-streaming" % "2.0.2" % "provided"
+  "org.apache.spark" %% "spark-core" % "2.3.0" % "provided",
+  "org.apache.spark" %% "spark-streaming" % "2.3.0" % "provided",
+  "org.apache.spark" %% "spark-streaming-kafka-0-10" % "2.3.0",
+
+  "org.apache.spark" %% "spark-mllib" % "2.3.0" % "provided"
 
 )
-
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x => MergeStrategy.first
+}
 resolvers += "Sonatype OSS Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots/"

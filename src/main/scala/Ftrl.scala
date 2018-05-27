@@ -2,7 +2,17 @@
   * Created by Taehee on 2018. 5. 19..
   */
 
+
 import breeze.linalg.SparseVector
+
+case class FtrlParam(
+                    n: Int, i: Int,
+                    alpha:Double, beta:Double, lambda:Double, lambda2:Double,
+                    weight : SparseVector[Double], z : SparseVector[Double],
+                    eta : SparseVector[Double], cumGrad : SparseVector[Double],
+                    cumGradSq : SparseVector[Double], nonZeroCoef : Int,
+                    bufferSize:Int, buffer: Array[(Int, Double, Double, Array[Int])]
+                    )
 
 class Ftrl {
 
@@ -21,6 +31,42 @@ class Ftrl {
   var bufferSize = 1000
   var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
 
+  def load(param:FtrlParam) = {
+    this.n = param.n
+    this.i = param.i
+    this.alpha = param.alpha
+    this.beta = param.beta
+    this.lambda = param.lambda
+    this.lambda2 = param.lambda2
+    this.weight = param.weight
+    this.z = param.z
+    this.eta = param.eta
+    this.cumGrad = param.cumGrad
+    this.cumGradSq =  param.cumGradSq
+    this.nonZeroCoef = param.nonZeroCoef
+    this.bufferSize = param.bufferSize
+    this.buffer = param.buffer
+    this
+  }
+
+  def save() = {
+    FtrlParam(
+      this.n,
+      this.i,
+      this.alpha,
+      this.beta ,
+      this.lambda,
+      this.lambda2,
+      this.weight,
+      this.z,
+      this.eta,
+      this.cumGrad,
+      this.cumGradSq,
+      this.nonZeroCoef,
+      this.bufferSize,
+      this.buffer
+    )
+  }
 
   def setVectorSize(n:Int) = {
     this.n = n
