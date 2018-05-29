@@ -38,7 +38,7 @@ object StreamingFtrl2 {
 
 
   val kafkaParams = Map[String, Object](
-    "bootstrap.servers" -> "localhost:9092,anotherhost:9092",
+    "bootstrap.servers" -> "localhost:9092,10.146.0.2:9092",
     "key.deserializer" -> classOf[StringDeserializer],
     "value.deserializer" -> classOf[StringDeserializer],
     "group.id" -> "use_a_separate_group_id_for_each_stream",
