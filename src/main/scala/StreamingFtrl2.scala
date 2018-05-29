@@ -21,9 +21,10 @@ import scala.util.parsing.json.JSON.parseFull
 object StreamingFtrl2 {
 
   /*
-./bin/spark-submit \
+
+/home/ths2o717/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
 --class StreamingFtrl2 \
-/Users/Taehee/Documents/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
+/home/ths2o717/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
 
 
    */
@@ -31,7 +32,7 @@ object StreamingFtrl2 {
   val sc = SparkContext.getOrCreate()
   val conf =sc.getConf.set("spark.driver.allowMultipleContexts", "true")
   val ssc = new StreamingContext(conf, Seconds(1))
-  ssc.checkpoint("/Users/Taehee/Documents/project/temp")
+  ssc//.checkpoint("/Users/Taehee/Documents/project/temp")
 
 
   LogManager.getRootLogger().setLevel(Level.OFF)
