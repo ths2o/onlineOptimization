@@ -101,7 +101,20 @@ object StreamingFtrl2 {
         save()
         */
       model.update(t._2)
-      println(model.i, model.weight)
+
+      if (model.i % 100 == 0) {
+        val summary = model.bufferSummary(0.5)
+
+        val summaryString = Array(
+          "loss          : " + summary._1,
+          "precision     : " + summary._2,
+          "AUC           : " + summary._3,
+          "Non-zero Coef : " + summary._4)
+        )
+
+        println(summaryString.mkString("\n"))
+
+      }
     }
   }
 /*
