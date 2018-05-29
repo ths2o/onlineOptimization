@@ -106,13 +106,14 @@ object StreamingFtrl2 {
         val summary = model.bufferSummary(0.5)
 
         val summaryString = Array(
-          "loss          : " + summary._1,
-          "precision     : " + summary._2,
-          "AUC           : " + summary._3,
-          "Non-zero Coef : " + summary._4
+          "loss          : " + "%.5f".format(summary._1),
+          "precision     : " + "%.5f".format(summary._2),
+          "AUC           : " + "%.5f".format(summary._3),
+          "Non-zero Coef : " + summary._4,
+          "i :" + model.i
         )
 
-        println(summaryString.mkString("\n"))
+        println(summaryString.mkString(",  "))
 
       }
     }
