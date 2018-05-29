@@ -109,7 +109,7 @@ object StreamingFtrl2 {
           "loss          : " + summary._1,
           "precision     : " + summary._2,
           "AUC           : " + summary._3,
-          "Non-zero Coef : " + summary._4)
+          "Non-zero Coef : " + summary._4
         )
 
         println(summaryString.mkString("\n"))
