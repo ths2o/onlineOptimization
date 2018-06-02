@@ -67,12 +67,11 @@ object AvazuTest {
 
       import java.text.SimpleDateFormat
 
-
-      val date = "20" + d.hour.take(6)
+      val date = if (i == 1)  "20140101" else "20" + d.hour.take(6)
       val dd = new SimpleDateFormat("yyyyMMdd")
       val day = dd.parse(date).getDay()
 
-      val hour = d.hour.drop(6)
+      val hour = if (i == 1)  "01" else d.hour.drop(6)
 
       val y = d.click
       val x = Array(
