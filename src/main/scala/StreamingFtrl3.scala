@@ -21,6 +21,8 @@ object StreamingFtrl3 {
 
 /home/ths2o717/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
 --class StreamingFtrl3 \
+--executor-memory 1G \
+--driver-memory 1G \
 /home/ths2o717/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
 
 ~/Documents/project/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
@@ -31,8 +33,8 @@ object StreamingFtrl3 {
    */
 
   val sc = SparkContext.getOrCreate()
-  val conf =sc.getConf.set("spark.driver.allowMultipleContexts", "true")
-  val ssc = new StreamingContext(conf, Seconds(1))
+  val conf =sc.getConf.setMaster("local[2]").set("spark.driver.allowMultipleContexts", "true")
+  val ssc = new StreamingContext(conf, Seconds(10))
   ssc//.checkpoint("/Users/Taehee/Documents/project/temp")
 
   val log = LogManager.getRootLogger
