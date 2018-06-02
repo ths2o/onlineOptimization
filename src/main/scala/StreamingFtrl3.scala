@@ -21,8 +21,8 @@ object StreamingFtrl3 {
 
 /home/ths2o717/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
 --class StreamingFtrl3 \
---executor-memory 1G \
---driver-memory 1G \
+--executor-memory 7G \
+--driver-memory 7G \
 /home/ths2o717/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
 
 ~/Documents/project/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
