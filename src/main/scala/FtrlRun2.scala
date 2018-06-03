@@ -4,6 +4,7 @@
 
 
 import breeze.linalg.SparseVector
+import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.SparkContext
 
 
@@ -57,8 +58,6 @@ object FtrlRun2 {
 
   /*
     ~/Documents/project/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
-    --executor-memory 1G \
-    --driver-memory 4G \
     --class FtrlRun2 ~/Documents/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
 
     */
@@ -67,7 +66,7 @@ object FtrlRun2 {
   def main(args: Array[String]): Unit = {
 
 
-    val aa = (1 to 8000).map(x=> makeCoef(5, 100)) union (1 to 2000).map(x=> makeCoef(0, 100000))
+    val aa = (1 to 20000).map(x=> makeCoef(5, 100)) union (1 to 100000).map(x=> makeCoef(0, 100000))
 
     val bb = util.Random.shuffle(aa).toArray.
       map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
@@ -77,16 +76,16 @@ object FtrlRun2 {
     //println(data.mkString("\n"))
 
 
-
     val sc = SparkContext.getOrCreate()
+    LogManager.getRootLogger().setLevel(Level.OFF)
 
-    val ss = sc.parallelize(bb).repartition(10)
+    val ss = sc.parallelize(bb).repartition(20)
 
     val kk = new FtrlSpark()
 
     kk.update(ss)
 
-    println(kk.globalW)
+    //println(kk.globalW)
 
 
 

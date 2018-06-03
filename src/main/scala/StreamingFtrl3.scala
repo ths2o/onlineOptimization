@@ -34,7 +34,7 @@ object StreamingFtrl3 {
 
   val sc = SparkContext.getOrCreate()
   val conf =sc.getConf.setMaster("local[2]").set("spark.driver.allowMultipleContexts", "true")
-  val ssc = new StreamingContext(conf, Seconds(10))
+  val ssc = new StreamingContext(conf, Seconds(5))
   ssc//.checkpoint("/Users/Taehee/Documents/project/temp")
 
   val log = LogManager.getRootLogger
@@ -97,12 +97,16 @@ object StreamingFtrl3 {
 
   val model = new FtrlSpark()
   val ss = parse.foreachRDD{ x=>
+
     model.update(x.map(x=> x._2))
-    log.warn(model.globalW)
+
+    //println(model.nonZeroCoef)
+
+    //log.warn(model.globalW)
     //println()
   }
 
-  parse.print()
+  //parse.print()
 
 
 

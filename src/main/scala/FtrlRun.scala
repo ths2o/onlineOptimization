@@ -82,7 +82,7 @@ object FtrlRun {
       map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
       flatten.toArray
     */
-    val aa = (1 to 80000).map(x=> makeCoef(5, 100)) union (1 to 20000).map(x=> makeCoef(0, 100000))
+    val aa = (1 to 20000).map(x=> makeCoef(5, 100)) union (1 to 4000).map(x=> makeCoef(0, 100000))
 
     val bb = util.Random.shuffle(aa).toArray.
       map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
@@ -104,7 +104,7 @@ object FtrlRun {
 
 
     val hyperParam = Array(
-      (1, 1, 0, 0)//,  (1, 1, 3, 0)
+      (10, 10, 3, 0)//,  (1, 1, 3, 0)
     )
 
     //val opt1 = new Ftrl().setAlpha(5).setBeta(1).setL1(0.5).setL2(1)
@@ -112,7 +112,17 @@ object FtrlRun {
     //val opt2 = new Ogd()
     //val opt = Array(opt1, opt2)
 
-    val opt = hyperParam.map(h=> new Ftrl().setAlpha(h._1).setBeta(h._2).setL1(h._3).setL2(h._4))
+
+    var globalP : Map[Int, Double] = Map.empty
+    var globalN : Map[Int, Double] = Map.empty
+    var globalW : Map[Int, Double] = Map.empty
+
+
+    val opt = hyperParam.map{h=>
+      new Ftrl2().setAlpha(h._1).setBeta(h._2).setL1(h._3).setL2(h._4).
+        setW(globalW).setP(globalP).setN(globalN)
+
+    }
 
 
     val t1 = System.currentTimeMillis()
@@ -137,6 +147,7 @@ object FtrlRun {
       if (i % 1000 == 0) {
         val summary = opt.map(o=> o.bufferSummary(0.5))
         println(summary.mkString(","), i)
+        println(opt.map(x=> x.weight.valueAt(1)).mkString)
         correct = Array.fill(hyperParam.size)(0)
       }
       //if (i % 1000 == 0) println(opt2.i, opt2.n, opt2.weight, i)

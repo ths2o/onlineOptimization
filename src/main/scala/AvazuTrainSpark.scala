@@ -4,7 +4,7 @@ import org.apache.spark.SparkContext
 /**
   * Created by Taehee on 2018. 5. 31..
   */
-
+/*
 object AvazuTrainSpark {
 
 
@@ -127,3 +127,4 @@ object AvazuTrainSpark {
   }
 
 }
+*/

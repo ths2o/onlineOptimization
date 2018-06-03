@@ -11,7 +11,7 @@ case class FtrlGlobalParam(
                       n: Int, i: Int,
                       alpha:Double, beta:Double, lambda:Double, lambda2:Double,
                       weight : SparseVector[Double], z : SparseVector[Double],
-                      eta : SparseVector[Double], cumGrad : SparseVector[Double],
+                      sigma : SparseVector[Double], cumGrad : SparseVector[Double],
                       cumGradSq : SparseVector[Double], nonZeroCoef : Int,
                       bufferSize:Int, buffer: Array[(Int, Double, Double, Array[Int])]
                     )
@@ -29,14 +29,19 @@ class Ftrl2 {
   var lambda2:Double = 0.0
   var weight : SparseVector[Double] = SparseVector.zeros[Double](n)
   var z : SparseVector[Double] = SparseVector.zeros[Double](n)
-  var eta : SparseVector[Double] = SparseVector.zeros[Double](n)
+  var sigma : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGrad : SparseVector[Double] = SparseVector.zeros[Double](n)
   var cumGradSq : SparseVector[Double] = SparseVector.zeros[Double](n)
   var nonZeroCoef : Int = 0
   var bufferSize = 1000
   var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
-  var pCount : SparseVector[Double] = SparseVector.zeros[Double](n)
-  var nCount : SparseVector[Double] = SparseVector.zeros[Double](n)
+  var pCount : Map[Int, Double] = Map.empty
+  var nCount : Map[Int, Double] = Map.empty
+
+  var wMap : Map[Int, Double] = Map.empty
+  var zMap : Map[Int, Double] = Map.empty
+  var gMap : Map[Int, Double] = Map.empty
+
 
   def load(param:FtrlParam) = {
     this.n = param.n
@@ -47,7 +52,7 @@ class Ftrl2 {
     this.lambda2 = param.lambda2
     this.weight = param.weight
     this.z = param.z
-    this.eta = param.eta
+    this.sigma = param.eta /** TO BE CORRECTED */
     this.cumGrad = param.cumGrad
     this.cumGradSq =  param.cumGradSq
     this.nonZeroCoef = param.nonZeroCoef
@@ -66,7 +71,7 @@ class Ftrl2 {
       this.lambda2,
       this.weight,
       this.z,
-      this.eta,
+      this.sigma,
       this.cumGrad,
       this.cumGradSq,
       this.nonZeroCoef,
@@ -86,7 +91,7 @@ class Ftrl2 {
   }
 
   def setBeta (beta:Double) = {
-    this.beta = alpha
+    this.beta = beta
     this
   }
 
@@ -100,18 +105,37 @@ class Ftrl2 {
     this
   }
 
+  def setW (w:Map[Int, Double]) ={
+    this.wMap = w
+    this
+  }
+  def setP (p:Map[Int, Double]) ={
+    this.pCount = p
+    this
+  }
+  def setN (n:Map[Int, Double]) ={
+    this.nCount = n
+    this
+  }
+
 
   def update(data : (Int, SparseVector[Double])) = {
 
     val fit = fitStat(data)
-    //val updatedParam = Ftrl.ftrlUpdate(data, alpha, beta, lambda, lambda2, weight, z, eta, cumGrad, cumGradSq)
-    val updatedParam = Ftrl2.ftrlUpdateApprox(
-      data, alpha, beta, lambda, lambda2, weight, z, eta, cumGradSq)
-    this.weight = updatedParam._1
-    //this.cumGradSq = updatedParam._3
-    this.cumGradSq = Ftrl2.cumGradSquareApprox(this.nCount, this.pCount)
-    this.eta = updatedParam._4
-    this.z = updatedParam._5
+    //val updatedParam = Ftrl2.ftrlUpdate(data,
+    //  alpha, beta, lambda, lambda2, wMap, zMap, sigma, gMap)
+    val updatedParam = Ftrl2.ftrlUpdateApprox(data,
+      alpha, beta, lambda, lambda2, wMap, zMap, sigma, gMap, nCount, pCount)
+
+    //val updatedParam = Ftrl2.ftrlUpdateApprox(
+    //  data, alpha, beta, lambda, lambda2, weight, z, eta, cumGradSq)
+    this.wMap = updatedParam._1
+    this.gMap = updatedParam._2
+    this.zMap = updatedParam._3
+    this.nCount = updatedParam._4
+    this.pCount = updatedParam._5
+
+    this.weight = FtrlRun.mapToSparseVector(wMap, this.n)
     this.i += 1
     this.nonZeroCoef = this.weight.activeSize
     this.buffer = if (this.buffer.size < this.bufferSize) this.buffer :+ fit else this.buffer.drop(1) :+ fit
@@ -188,91 +212,177 @@ object Ftrl2 {
     //w.zip(grad.map(_ * learningRate)).map(k => k._1 - k._2)
   }
 
-  def eta(cumGradSq : SparseVector[Double], alpha:Double, beta:Double, lambda2:Double) = {
-    val iCumGradSq = cumGradSq.copy
-    //iCumGradSq.activeIterator.foreach(x=> iCumGradSq.update(x._1, alpha/(beta + math.sqrt(x._2))))
-    iCumGradSq.activeIterator.foreach(x=> iCumGradSq.update(x._1, 1/((beta + math.sqrt(x._2)) / alpha + lambda2) ))
-    iCumGradSq
+  def sigmaUpdater(
+                    oldSigma : SparseVector[Double],
+                    //oldCumGradSq : SparseVector[Double],
+                    //newCumGradSq : SparseVector[Double],
+                    oldCumGradSq:Map[Int, Double],
+                    newCumGradSq:Map[Int, Double],
+                    alpha : Double,
+                    data : SparseVector[Double]
+                  ) ={
+
+    val newSigma = oldSigma.copy
+    data.activeIterator.foreach{x=>
+      //val newN = if (newCumGradSq.contains(x._1)) newCumGradSq.valueAt(x._1) else 0
+      //val oldN = if (oldCumGradSq.contains(x._1)) oldCumGradSq.valueAt(x._1) else 0
+      val newN = oldCumGradSq.getOrElse(x._1, 0D)
+      val oldN = newCumGradSq.getOrElse(x._1, 0D)
+      newSigma.update(x._1, (math.sqrt(newN) - math.sqrt(oldN))/alpha)
+      //newSigma += (x._1 -> (math.sqrt(newN) - math.sqrt(oldN))/alpha)
+    }
+    newSigma
+
   }
 
   def zUpdater(
-                oldZ : SparseVector[Double],
+                //oldZ : SparseVector[Double],
+                oldZ:Map[Int, Double],
                 grad : SparseVector[Double],
-                oldEta : SparseVector[Double],
-                newEta : SparseVector[Double],
-                w : SparseVector[Double]
+                sigma : SparseVector[Double],
+                //w : SparseVector[Double],
+                w:Map[Int, Double],
+                data : SparseVector[Double]
               ) ={
 
-    val iNewEta = newEta.copy
-    iNewEta.activeIterator.foreach(x=> iNewEta.update(x._1, 1/x._2))
-    val iOldEta = oldEta.copy
-    iOldEta.activeIterator.foreach(x=> iOldEta.update(x._1, 1/x._2))
-
-    oldZ + grad + (iNewEta - iOldEta) *:* w
+    val gMap = grad.activeIterator.toMap
+    val sMap = sigma.activeIterator.toMap
+    var newZ = oldZ
+    //oldZ + grad - sigma *:* w
+    data.activeIterator.foreach{x=>
+      val z = oldZ.getOrElse(x._1, 0D)
+      //newZ = newZ.updated(x._1, z + gMap.getOrElse(x._1, 0D) - sMap.getOrElse(x._1, 0D) * w.getOrElse(x._1, 0D) )
+      newZ += (x._1-> (z + gMap.getOrElse(x._1, 0D) - sMap.getOrElse(x._1, 0D) * w.getOrElse(x._1, 0D) ))
+    }
+    newZ
   }
 
-  def wUpdater(z:SparseVector[Double], eta:SparseVector[Double], lambda:Double) = {
+  def wUpdater(
+                //oldW : SparseVector[Double],
+                oldW:Map[Int, Double],
+                //z:SparseVector[Double],
+                z:Map[Int, Double],
+                //cumGradSq:SparseVector[Double],
+                cumGradSq:Map[Int, Double],
+                alpha : Double, beta : Double,
+                lambda:Double, lambda2 :Double,
+                data:SparseVector[Double]
+              ) = {
 
-    val newZ = z.copy
-    newZ.activeIterator.foreach{x=>
-      if (math.abs(x._2) <= lambda) newZ.update(x._1, 0)
+
+    //val ni = cumGradSq.activeIterator.toMap
+    //val zMap = z.activeIterator.toMap
+    var newW = oldW
+
+    data.activeIterator.foreach{x=>
+
+      //val ni = if (cumGradSq.isActive(x._1)) cumGradSq.valueAt(x._1) else 0
+      val ni = cumGradSq.getOrElse(x._1, 0D)//if (cumGradSq.contains(x._1)) cumGradSq.valueAt(x._1) else 0
+      val zi = z.getOrElse(x._1, 0D)//if (z.contains(x._1)) z.valueAt(x._1) else 0
+
+      val discount = -((beta + math.sqrt(ni)) / alpha + lambda2)
+      if (math.abs(zi) <= lambda) newW += (x._1 -> 0D)//newW = newW.updated(x._1, 0)
       else {
-        //val zi = newZ.valueAt(x._1)
-        newZ.update(x._1, if(x._2 >=0) x._2 -lambda else x._2+lambda)
+        //newW = newW.updated(x._1, if(zi >=0) (zi -lambda) / discount else (zi+lambda) / discount)
+        newW += (x._1 -> (if(zi >=0) (zi -lambda) / discount else (zi+lambda) / discount))
         //if (zi >= 0) newZ.update(x._1, zi - lambda) else newZ.update(x._1, zi + lambda)
       }
     }
 
-    newZ.compact()
-    val newW = - eta *:* newZ
+    //newW.compact()
+
     newW
+    //oldW
   }
 
-  def counter(count:SparseVector[Double], data:SparseVector[Double]) = {
+  def cumGradSqUpdater(
+                        //oldCumGradSq:SparseVector[Double],
+                        oldCumGradSq:Map[Int, Double],
+                        grad:SparseVector[Double],
+                        data:SparseVector[Double]
+                      ) = {
 
-    val index = SparseVector.zeros[Double](Int.MaxValue)
-    data.activeIterator.foreach{i=>
-      index.update(i._1, 1)
+
+    val gradMap = grad.activeIterator.toMap
+    var newCumGradSq = oldCumGradSq
+    data.activeIterator.foreach{x=>
+
+      val gradi = gradMap.getOrElse(x._1, 0D)
+      //if (grad.contains(x._1)) grad.valueAt(x._1) else 0
+      val gradSq = gradi * gradi
+      //newCumGradSq.update(x._1, gradSq)
+      //
+      newCumGradSq += (x._1 -> gradSq)
     }
-    count + index
+    //newCumGradSq.compact()
+    newCumGradSq
+    //oldCumGradSq
+
+  }
+
+  def counter(count:Map[Int,Double], data:SparseVector[Double]) = {
+
+    var newCount = count
+    //val index = SparseVector.zeros[Double](Int.MaxValue)
+    data.activeIterator.foreach{i=>
+      val c = count.getOrElse(i._1, 0D)
+      newCount += (i._1 -> (c + 1))
+    }
+    //println(count + index)
+    newCount
   }
 
   def cumGradSquareApprox(
-                           nCount:SparseVector[Double],
-                           pCount:SparseVector[Double]) = {
+                           nCount : Map[Int,Double],
+                           pCount : Map[Int,Double],
+                           oldCumGradSq : Map[Int, Double],
+                           data : SparseVector[Double]
+                         ) = {
 
-    val denom = nCount + pCount
-    val nom = nCount *:* pCount
+    var newCumGradSq = oldCumGradSq
 
-    nom/:/denom
-
+    data.activeIterator.foreach{x=>
+      val nom = nCount.getOrElse(x._1, 0D) * pCount.getOrElse(x._1, 0D)
+      val denom = nCount.getOrElse(x._1, 0D) + pCount.getOrElse(x._1, 0D)
+      newCumGradSq += (x._1 -> nom / denom)
+    }
+    newCumGradSq
   }
 
 
   def ftrlUpdateApprox(
-                  data : (Int, SparseVector[Double]),
-                  alpha:Double,
-                  beta:Double,
-                  lambda:Double,
-                  lambda2:Double,
-                  oldWeight : SparseVector[Double],
-                  oldZ : SparseVector[Double],
-                  oldEta : SparseVector[Double],
-                  oldCumGradSq : SparseVector[Double]
+
+                       data : (Int, SparseVector[Double]),
+                       alpha:Double,
+                       beta:Double,
+                       lambda:Double,
+                       lambda2:Double,
+                       oldWeight:Map[Int, Double],
+                       oldZ:Map[Int, Double],
+                       oldSigma : SparseVector[Double],
+                       oldCumGradSq:Map[Int, Double],
+                       nCount:Map[Int, Double],
+                       pCount:Map[Int, Double]
                 ) = {
 
+    val weight = wUpdater(oldWeight, oldZ, oldCumGradSq, alpha, beta, lambda, lambda2, data._2)
+    val grad = gradientLL(data._1, FtrlRun.mapToSparseVector(weight, Int.MaxValue), data._2); grad.compact()
 
-    val weight = wUpdater(oldZ, oldEta, lambda); weight.compact()
-    val grad = gradientLL(data._1, weight, data._2); grad.compact()
-    val cumGradSq = oldCumGradSq; cumGradSq.compact()
-    val newEta = eta(cumGradSq, alpha, beta, lambda2); newEta.compact
-    val newZ = zUpdater(oldZ, grad, oldEta, newEta, weight); newZ.compact()
+    var newP = pCount
+    var newN = nCount
+    if (data._1 == 1) newP = counter(pCount, data._2) else newN = counter(nCount, data._2)
 
+    val cumGradSq = cumGradSquareApprox(newN, newP, oldCumGradSq, data._2)
+    val newSigma = sigmaUpdater(oldSigma, oldCumGradSq, cumGradSq, alpha, data._2)
+    //val newEta = eta(cumGradSq, alpha, beta, lambda2, data._2); newEta.compact
+    val newZ = zUpdater(oldZ, grad, newSigma, weight, data._2)
 
-    (weight, grad, cumGradSq, newEta, newZ)
+    //println(weight)
+    //println(weight.keySet)
+    (weight.filter(x=> x._2 !=0), cumGradSq.filter(x=> x._2 !=0),
+      newZ.filter(x=> x._2 !=0), newP.filter(x=> x._2 !=0), newN.filter(x=> x._2 !=0))
 
   }
-
 
   def ftrlUpdate(
                        data : (Int, SparseVector[Double]),
@@ -280,22 +390,26 @@ object Ftrl2 {
                        beta:Double,
                        lambda:Double,
                        lambda2:Double,
-                       oldWeight : SparseVector[Double],
-                       oldZ : SparseVector[Double],
-                       oldEta : SparseVector[Double],
-                       oldCumGrad : SparseVector[Double],
-                       oldCumGradSq : SparseVector[Double]
+                       //oldWeight : SparseVector[Double],
+                       oldWeight:Map[Int, Double],
+                       //oldZ : SparseVector[Double],
+                       oldZ:Map[Int, Double],
+                       oldSigma : SparseVector[Double],
+                       //oldCumGradSq : SparseVector[Double]
+                       oldCumGradSq:Map[Int, Double]
                      ) = {
 
 
-    val weight = wUpdater(oldZ, oldEta, lambda); weight.compact()
-    val grad = gradientLL(data._1, weight, data._2); grad.compact()
-    val cumGrad = oldCumGrad + grad; cumGrad.compact()
-    val cumGradSq = oldCumGradSq + grad *:* grad; cumGradSq.compact()
-    val newEta = eta(cumGradSq, alpha, beta, lambda2); newEta.compact
-    val newZ = zUpdater(oldZ, grad, oldEta, newEta, weight); newZ.compact()
+    val weight = wUpdater(oldWeight, oldZ, oldCumGradSq, alpha, beta, lambda, lambda2, data._2)//; weight.compact()
+    val grad = gradientLL(data._1, FtrlRun.mapToSparseVector(weight, Int.MaxValue), data._2); grad.compact()
+    //val cumGrad = oldCumGrad + grad; cumGrad.compact()
+    val cumGradSq = cumGradSqUpdater(oldCumGradSq, grad, data._2)//; cumGradSq.compact()
+    val newSigma = sigmaUpdater(oldSigma, oldCumGradSq, cumGradSq, alpha, data._2)
+    //val newEta = eta(cumGradSq, alpha, beta, lambda2, data._2); newEta.compact
+    val newZ = zUpdater(oldZ, grad, newSigma, weight, data._2)//; newZ.compact()
 
-    (weight, grad, cumGrad, cumGradSq, newEta, newZ)
+    //println(newZ.size)
+    (weight.filter(x=> x._2 !=0), cumGradSq.filter(x=> x._2 !=0), newZ.filter(x=> x._2 !=0))
 
   }
 }

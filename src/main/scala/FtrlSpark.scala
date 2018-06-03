@@ -7,16 +7,86 @@ import org.apache.spark.rdd.RDD
 
 class FtrlSpark {
 
-  var globalP = SparseVector.zeros[Double](Int.MaxValue)
-  var globalN = SparseVector.zeros[Double](Int.MaxValue)
-  var globalW = SparseVector.zeros[Double](Int.MaxValue)
+  var globalP : Map[Int, Double] = Map.empty
+  var globalN : Map[Int, Double] = Map.empty
+  var globalW : Map[Int, Double] = Map.empty
+
+  var n = Int.MaxValue
+  var i = 1
+  var alpha:Double = 5.0
+  var beta:Double = 1.0
+  var lambda:Double = 0.0
+  var lambda2:Double = 0.0
+  var weight : SparseVector[Double] = SparseVector.zeros[Double](n)
+  var nonZeroCoef : Int = 0
+  var bufferSize = 1000
+  var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
+
+
 
   def update(data:RDD[(Int, SparseVector[Double])]) ={
+
+    //this.buffer = data.map{x=> fitStat(x)}.collect
     val model = FtrlSpark.ftrlPar(data, this.globalP, this.globalN, this.globalW)
-    this.globalP = model._1
-    this.globalN = model._2
-    this.globalW = model._3
+    //this.globalW = model._1
+    //this.globalP = model._2
+    //this.globalN = model._3
+    this.globalW = this.globalW ++ model._1
+    this.globalP = (globalP.toSeq ++ model._2.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
+    this.globalN = (globalP.toSeq ++ model._3.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
+    this.weight = FtrlRun.mapToSparseVector(globalW, n)
+
+    //println(globalW.getOrElse(1, 0D), globalP.getOrElse(1, 0D), globalN.getOrElse(1, 0D), i)
+
+    this.i += 1
+    this.nonZeroCoef = this.weight.activeSize
+    //this.buffer = if (this.buffer.size < this.bufferSize) this.buffer :+ fit else this.buffer.drop(1) :+ fit
+
+
     this
+  }
+
+
+  def predictProb (data : SparseVector[Double]) = {
+    Ftrl.sigmoid(weight.dot(data))
+  }
+
+  def predictLabel (data : SparseVector[Double], threshold:Double) ={
+    if (predictProb(data) >= threshold) 1 else 0
+  }
+
+
+  def fitStat (data : (Int, SparseVector[Double])) = {
+    val prob = predictProb(data._2)
+    val loss = Ftrl.logLoss(data._1, this.weight, data._2)
+    val positive = (0 to 10).map(x=> if (prob >= x.toDouble/10D) 1 else 0).toArray
+    (data._1, prob, loss, positive)
+  }
+
+  def fitRdd (data : RDD[(Int, SparseVector[Double])]) = {
+    data.map(x=> fitStat(x))
+  }
+
+
+
+  def bufferSummary(data : RDD[(Int, SparseVector[Double])], threshold : Double) ={
+    val buffer = fitRdd(data)
+    val size = buffer.count.toDouble
+    val loss = buffer.map(x=> x._3).sum / size
+    val pLabel = buffer.map(x=> if (x._2 >= threshold) 1 else 0)
+    val precision = buffer.map(x=> x._1).zip(pLabel).map(x=> if(x._1 == x._2) 1 else 0).sum.toDouble / size
+    /*
+    val roc = buffer.groupBy(_._1).map{x=>
+      val aa = x._2.map(x=> x._4).reduce((a, b) => a.zip(b).map(x=> x._1 + x._2))
+      val bb = x._2.size
+      val cc = aa.map(t => t.toDouble/bb.toDouble)
+      (x._1, cc)
+    }
+    val height = roc.getOrElse(1, Array.fill(11)(0D)).drop(1).zip(roc.getOrElse(1, Array.fill(11)(0D)).dropRight(1)).map(x=> (x._1 + x._2)/2)
+    val width = roc.getOrElse(0, Array.fill(11)(0D)).dropRight(1).zip(roc.getOrElse(0, Array.fill(11)(0D)).drop(1)).map(x=> (x._1 - x._2))
+    val auc = height.zip(width).map(x=> x._1 * x._2).sum
+    */
+    (loss, precision, this.nonZeroCoef)
   }
 
 
@@ -25,11 +95,12 @@ class FtrlSpark {
 object FtrlSpark {
 
 
+
   def ftrlPar(
                data : RDD[(Int, SparseVector[Double])],
-               globalP : SparseVector[Double],
-               globalN : SparseVector[Double],
-               globalW : SparseVector[Double]
+               globalP : Map[Int, Double],
+               globalN : Map[Int, Double],
+               globalW : Map[Int, Double]
 
              ) = {
 
@@ -37,45 +108,57 @@ object FtrlSpark {
     //val numParts = if (numPartitions > 0) numPartitions else data.getNumPartitions
     //val context = data.context
 
-    val w = data.mapPartitions{ part =>
-      var localW = globalW
-      var localP = globalP
-      var localN = globalN
-      var internalP = SparseVector.zeros[Double](Int.MaxValue)
-      var internalN = SparseVector.zeros[Double](Int.MaxValue)
+    val w = data.repartition(4).mapPartitions{ part =>
 
-      val updater = new Ftrl2().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
-      updater.cumGradSq = Ftrl2.cumGradSquareApprox(localN, localP)
-      updater.weight = localW
+      var localP :Map[Int, Double] = Map.empty
+      var localN :Map[Int, Double] = Map.empty
 
-      part.foreach{x=>
+
+      val updater = new Ftrl2().
+        setAlpha(10).
+        setBeta(10).
+        setL1(3).setL2(0).
+        setW(globalW).setP(globalP).setN(globalN)
+
+      var correct : Int = 0
+      var count : Int = 0
+      var logloss : Double = 0
+      part.toArray.foreach{x=>
 
         updater.update(x)
+        if(x._1 == 1) localP = Ftrl2.counter(localP, x._2) else localN = Ftrl2.counter(localN, x._2)
+        //println(updater.weight, updater.i)
 
-        if (x._1 == 1) {
-          localP = Ftrl2.counter(localP, x._2)
-          internalP = Ftrl2.counter(internalP, x._2)
-        } else {
-          localN = Ftrl2.counter(localN, x._2)
-          internalN = Ftrl2.counter(internalN, x._2)
-        }
+        val p = if (Ftrl2.p(updater.weight, x._2) >= 0.5) 1 else 0
 
-        updater.cumGradSq = Ftrl2.cumGradSquareApprox(localN, localP)
+        correct += (if (x._1 == p) 1 else 0)
+        logloss += (Ftrl2.logLoss(x._1, updater.weight, x._2))
+        count += 1
       }
 
-      val normalizeFactor = SparseVector.zeros[Double](Int.MaxValue)
-      val aa = (internalN + internalP)
-      aa.compact()
-      aa.activeIterator.foreach{x=>
-        normalizeFactor.update(x._1, 1)
-      }
+      println(correct.toDouble/count.toDouble, logloss/count, count)
+      Iterator((updater.wMap, localP, localN))
 
-      Iterator((updater.weight, internalN, internalP, normalizeFactor))
-    }.reduce{case ((a1, a2, a3, a4), (b1, b2, b3, b4)) =>
-      (a1 + b1, a2 + b2, a3 + b3, a4 + b4)
+    }.reduce { case ((a1, a2, a3), (b1, b2, b3)) =>
+      val a = (a1.toSeq ++ b1.toSeq).groupBy(x=> x._1).map{x=>
+        val sum = x._2.map(x=> x._2).sum
+        val count = x._2.map(x=> x._2).size
+        (x._1, sum/count)
+      }
+      val b = (a2.toSeq ++ b2.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
+      val c = (a3.toSeq ++ b3.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
+      (a, b, c)
     }
 
-    (w._1 /:/ w._4, w._2, w._3)
+
+    //  reduce{case ((a1, a2, a3), (b1, b2, b3)) =>
+
+    //}
+    //(w._1 /:/ w._4, w._2, w._3)
+    //println(w._1)
+    w
+
+
 
   }
 
