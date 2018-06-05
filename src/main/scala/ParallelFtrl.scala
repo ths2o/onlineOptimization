@@ -107,6 +107,7 @@ class Ftrl2 {
 
   def setW (w:Map[Int, Double]) ={
     this.wMap = w
+    this.weight = FtrlRun.mapToSparseVector(wMap, n)
     this
   }
   def setP (p:Map[Int, Double]) ={
@@ -117,6 +118,15 @@ class Ftrl2 {
     this.nCount = n
     this
   }
+
+  def setPerCoordinateLearningRate (p:Map[Int, Double], n:Map[Int, Double]) = {
+    this.pCount = p
+    this.nCount = n
+    this.cumGradSq = Ftrl2.cumGradSquareApprox(nCount, pCount)
+    this.gMap = cumGradSq.activeIterator.toMap
+    this
+  }
+
 
 
   def update(data : (Int, SparseVector[Double])) = {
@@ -235,6 +245,27 @@ object Ftrl2 {
 
   }
 
+  def sigmaUpdater(
+                    oldCumGradSq:Map[Int, Double],
+                    newCumGradSq:Map[Int, Double],
+                    alpha : Double
+                  ) ={
+
+    val index = oldCumGradSq.keySet ++ newCumGradSq.keySet
+    var newSigma : Map[Int, Double] = Map.empty
+    index.foreach{x=>
+      //val newN = if (newCumGradSq.contains(x._1)) newCumGradSq.valueAt(x._1) else 0
+      //val oldN = if (oldCumGradSq.contains(x._1)) oldCumGradSq.valueAt(x._1) else 0
+      val newN = oldCumGradSq.getOrElse(x, 0D)
+      val oldN = newCumGradSq.getOrElse(x, 0D)
+      //newSigma.updated(x, (math.sqrt(newN) - math.sqrt(oldN))/alpha)
+      newSigma += (x -> (math.sqrt(newN) - math.sqrt(oldN))/alpha)
+    }
+    FtrlRun.mapToSparseVector(newSigma, Int.MaxValue)
+
+  }
+
+
   def zUpdater(
                 //oldZ : SparseVector[Double],
                 oldZ:Map[Int, Double],
@@ -349,6 +380,20 @@ object Ftrl2 {
     newCumGradSq
   }
 
+  def cumGradSquareApprox(
+                           nCount : Map[Int,Double],
+                           pCount : Map[Int,Double]
+                         ) = {
+
+    val newCumGradSq = FtrlRun.mapToSparseVector(nCount ++ pCount, Int.MaxValue)
+
+    newCumGradSq.activeIterator.foreach{x=>
+      val nom = nCount.getOrElse(x._1, 0D) * pCount.getOrElse(x._1, 0D)
+      val denom = nCount.getOrElse(x._1, 0D) + pCount.getOrElse(x._1, 0D)
+      newCumGradSq.update(x._1, nom / denom)
+    }
+    newCumGradSq
+  }
 
   def ftrlUpdateApprox(
 
@@ -404,7 +449,9 @@ object Ftrl2 {
     val grad = gradientLL(data._1, FtrlRun.mapToSparseVector(weight, Int.MaxValue), data._2); grad.compact()
     //val cumGrad = oldCumGrad + grad; cumGrad.compact()
     val cumGradSq = cumGradSqUpdater(oldCumGradSq, grad, data._2)//; cumGradSq.compact()
-    val newSigma = sigmaUpdater(oldSigma, oldCumGradSq, cumGradSq, alpha, data._2)
+    val newSigma = if (oldSigma.activeSize > 0) {
+      sigmaUpdater(oldSigma, oldCumGradSq, cumGradSq, alpha, data._2)
+    } else sigmaUpdater(oldCumGradSq, cumGradSq, alpha)
     //val newEta = eta(cumGradSq, alpha, beta, lambda2, data._2); newEta.compact
     val newZ = zUpdater(oldZ, grad, newSigma, weight, data._2)//; newZ.compact()
 

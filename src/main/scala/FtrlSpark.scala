@@ -23,11 +23,30 @@ class FtrlSpark {
   var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
 
 
+  def setAlpha (alpha:Double) = {
+    this.alpha = alpha
+    this
+  }
+
+  def setBeta (beta:Double) = {
+    this.beta = beta
+    this
+  }
+
+  def setL1 (lambda:Double) = {
+    this.lambda = lambda
+    this
+  }
+
+  def setL2 (lambda2:Double) = {
+    this.lambda2 = lambda2
+    this
+  }
 
   def update(data:RDD[(Int, SparseVector[Double])]) ={
 
     //this.buffer = data.map{x=> fitStat(x)}.collect
-    val model = FtrlSpark.ftrlPar(data, this.globalP, this.globalN, this.globalW)
+    val model = FtrlSpark.ftrlPar(data, this.globalP, this.globalN, this.globalW, alpha, beta, lambda, lambda2)
     //this.globalW = model._1
     //this.globalP = model._2
     //this.globalN = model._3
@@ -100,7 +119,8 @@ object FtrlSpark {
                data : RDD[(Int, SparseVector[Double])],
                globalP : Map[Int, Double],
                globalN : Map[Int, Double],
-               globalW : Map[Int, Double]
+               globalW : Map[Int, Double],
+               alpha:Double, beta:Double, lambda:Double, lambda2:Double
 
              ) = {
 
@@ -115,10 +135,10 @@ object FtrlSpark {
 
 
       val updater = new Ftrl2().
-        setAlpha(10).
-        setBeta(10).
-        setL1(3).setL2(0).
-        setW(globalW).setP(globalP).setN(globalN)
+        setAlpha(alpha).
+        setBeta(beta).
+        setL1(lambda).setL2(lambda2).
+        setW(globalW).setPerCoordinateLearningRate(localP,localN)
 
       var correct : Int = 0
       var count : Int = 0
