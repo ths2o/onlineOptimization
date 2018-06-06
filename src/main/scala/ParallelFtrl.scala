@@ -110,6 +110,13 @@ class Ftrl2 {
     this.weight = FtrlRun.mapToSparseVector(wMap, n)
     this
   }
+
+  def setZ (z:Map[Int, Double]) ={
+    this.zMap = z
+    this
+  }
+
+
   def setP (p:Map[Int, Double]) ={
     this.pCount = p
     this

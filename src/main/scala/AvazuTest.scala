@@ -1,3 +1,5 @@
+import breeze.linalg.SparseVector
+
 /**
   * Created by Taehee on 2018. 5. 31..
   */
@@ -46,9 +48,10 @@ object AvazuTest {
 
 
     val ois = new ObjectInputStream(new FileInputStream("/Users/Taehee/Downloads/ftrlParam"))
-    val param = ois.readObject.asInstanceOf[FtrlParam]
+    //val param = ois.readObject.asInstanceOf[FtrlParam]
+    val param = ois.readObject.asInstanceOf[SparseVector[Double]]
     ois.close
-    val model = new Ftrl().setAlpha(1).setBeta(1).setL1(2).setL2(0).load(param)
+    //val model = new Ftrl().setAlpha(1).setBeta(1).setL1(2).setL2(0).load(param)
 
     val writer = new PrintStream(new FileOutputStream("/Users/Taehee/Downloads/sthSubmission", true))
     //val filename = "/Users/Taehee/Downloads/test"
@@ -75,7 +78,7 @@ object AvazuTest {
 
       val y = d.click
       val x = Array(
-        //"1" + d.hour,
+        "1" + d.hour,
         "1d" + day,
         "1h" + hour,
         "2" + d.C1,
@@ -102,7 +105,7 @@ object AvazuTest {
 
       val sparseX = FtrlRun.mapToSparseVector(xHash, Int.MaxValue)
 
-      val prob = model.predictProb(sparseX)
+      val prob = Ftrl.p(param, sparseX)
 
       val output = if (i == 1) "id,click"else d.id + "," + "%.8f".format(prob)
 

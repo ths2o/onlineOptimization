@@ -10,6 +10,7 @@ class FtrlSpark {
   var globalP : Map[Int, Double] = Map.empty
   var globalN : Map[Int, Double] = Map.empty
   var globalW : Map[Int, Double] = Map.empty
+  var globalZ : Map[Int, Double] = Map.empty
 
   var n = Int.MaxValue
   var i = 1
@@ -45,21 +46,26 @@ class FtrlSpark {
 
   def update(data:RDD[(Int, SparseVector[Double])]) ={
 
+    val fit = data.sample(false, 0.01).collect.map(x=> fitStat(x))
     //this.buffer = data.map{x=> fitStat(x)}.collect
-    val model = FtrlSpark.ftrlPar(data, this.globalP, this.globalN, this.globalW, alpha, beta, lambda, lambda2)
+    val model = FtrlSpark.ftrlPar(data, this.globalP, this.globalN, this.globalW, this.globalZ,
+      alpha, beta, lambda, lambda2)
     //this.globalW = model._1
     //this.globalP = model._2
     //this.globalN = model._3
+
     this.globalW = this.globalW ++ model._1
     this.globalP = (globalP.toSeq ++ model._2.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
     this.globalN = (globalP.toSeq ++ model._3.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
+    this.globalZ = this.globalZ ++ model._4
     this.weight = FtrlRun.mapToSparseVector(globalW, n)
 
     //println(globalW.getOrElse(1, 0D), globalP.getOrElse(1, 0D), globalN.getOrElse(1, 0D), i)
 
-    this.i += 1
+    this.i = fit.size
     this.nonZeroCoef = this.weight.activeSize
     //this.buffer = if (this.buffer.size < this.bufferSize) this.buffer :+ fit else this.buffer.drop(1) :+ fit
+    this.buffer = fit
 
 
     this
@@ -88,13 +94,13 @@ class FtrlSpark {
 
 
 
-  def bufferSummary(data : RDD[(Int, SparseVector[Double])], threshold : Double) ={
-    val buffer = fitRdd(data)
-    val size = buffer.count.toDouble
+  def bufferSummary(threshold : Double) ={
+    //val buffer = fitRdd(data)
+    val size = buffer.size.toDouble
     val loss = buffer.map(x=> x._3).sum / size
     val pLabel = buffer.map(x=> if (x._2 >= threshold) 1 else 0)
     val precision = buffer.map(x=> x._1).zip(pLabel).map(x=> if(x._1 == x._2) 1 else 0).sum.toDouble / size
-    /*
+
     val roc = buffer.groupBy(_._1).map{x=>
       val aa = x._2.map(x=> x._4).reduce((a, b) => a.zip(b).map(x=> x._1 + x._2))
       val bb = x._2.size
@@ -104,8 +110,9 @@ class FtrlSpark {
     val height = roc.getOrElse(1, Array.fill(11)(0D)).drop(1).zip(roc.getOrElse(1, Array.fill(11)(0D)).dropRight(1)).map(x=> (x._1 + x._2)/2)
     val width = roc.getOrElse(0, Array.fill(11)(0D)).dropRight(1).zip(roc.getOrElse(0, Array.fill(11)(0D)).drop(1)).map(x=> (x._1 - x._2))
     val auc = height.zip(width).map(x=> x._1 * x._2).sum
-    */
-    (loss, precision, this.nonZeroCoef)
+
+
+    (loss, precision, auc, this.nonZeroCoef)
   }
 
 
@@ -120,6 +127,7 @@ object FtrlSpark {
                globalP : Map[Int, Double],
                globalN : Map[Int, Double],
                globalW : Map[Int, Double],
+               globalZ : Map[Int, Double],
                alpha:Double, beta:Double, lambda:Double, lambda2:Double
 
              ) = {
@@ -138,11 +146,8 @@ object FtrlSpark {
         setAlpha(alpha).
         setBeta(beta).
         setL1(lambda).setL2(lambda2).
-        setW(globalW).setPerCoordinateLearningRate(localP,localN)
+        setW(globalW).setPerCoordinateLearningRate(localP,localN).setZ(globalZ)
 
-      var correct : Int = 0
-      var count : Int = 0
-      var logloss : Double = 0
       part.toArray.foreach{x=>
 
         updater.update(x)
@@ -151,15 +156,15 @@ object FtrlSpark {
 
         val p = if (Ftrl2.p(updater.weight, x._2) >= 0.5) 1 else 0
 
-        correct += (if (x._1 == p) 1 else 0)
-        logloss += (Ftrl2.logLoss(x._1, updater.weight, x._2))
-        count += 1
+      //  correct += (if (x._1 == p) 1 else 0)
+      //  logloss += (Ftrl2.logLoss(x._1, updater.weight, x._2))
+      //  count += 1
       }
 
-      println(correct.toDouble/count.toDouble, logloss/count, count)
-      Iterator((updater.wMap, localP, localN))
+      //println(correct.toDouble/count.toDouble, logloss/count, count)
+      Iterator((updater.wMap, localP, localN, updater.zMap))
 
-    }.reduce { case ((a1, a2, a3), (b1, b2, b3)) =>
+    }.reduce { case ((a1, a2, a3, a4), (b1, b2, b3, b4)) =>
       val a = (a1.toSeq ++ b1.toSeq).groupBy(x=> x._1).map{x=>
         val sum = x._2.map(x=> x._2).sum
         val count = x._2.map(x=> x._2).size
@@ -167,7 +172,14 @@ object FtrlSpark {
       }
       val b = (a2.toSeq ++ b2.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
       val c = (a3.toSeq ++ b3.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
-      (a, b, c)
+
+      val d = (a4.toSeq ++ b4.toSeq).groupBy(x=> x._1).map{x=>
+        val sum = x._2.map(x=> x._2).sum
+        val count = x._2.map(x=> x._2).size
+        (x._1, sum/count)
+      }
+
+      (a, b, c, d)
     }
 
 

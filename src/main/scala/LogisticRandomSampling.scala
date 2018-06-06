@@ -94,7 +94,7 @@ object LogisticRandomSampling {
         //"echo " + "\""+ label + " " + feature + "\"" + "| nc 127.0.0.1 9999"
         label + " " + feature
       }
-      Thread.sleep(2)
+      Thread.sleep(5)
       ss
     }
 

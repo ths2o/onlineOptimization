@@ -67,24 +67,11 @@ object FtrlRun2 {
 
 
 
-
-    val aa = (1 to 800).map(x=> makeCoef(5, 100)) union (1 to 200).map(x=> makeCoef(0, 100000))
-
-    val bb = util.Random.shuffle(aa).toArray.
-      map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
-      flatten
-
-    val data = bb
-    //println(data.mkString("\n"))
-
-
     val sc = SparkContext.getOrCreate()
     LogManager.getRootLogger().setLevel(Level.OFF)
 
-    val ss = sc.parallelize(bb).repartition(4)
-
-    val tt = (0 to 1).map{x=>
-      val aa = (1 to 20000).map(x=> makeCoef(5, 100)) union (1 to 10000).map(x=> makeCoef(0, 100000))
+    val tt = (0 to 20).map{x=>
+      val aa = (1 to 3000).map(x=> makeCoef(5, 100)) union (1 to 1000).map(x=> makeCoef(0, 100000))
       val bb = util.Random.shuffle(aa).toArray.
         map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
         flatten
@@ -99,68 +86,35 @@ object FtrlRun2 {
       setBeta(10).
       setL1(3).setL2(0)
 
-    val tt1 = tt.reduce((a,b)=> a ++ b)//.repartition(20)
+    val tt1 = tt//.reduce((a,b)=> a ++ b)//.repartition(20)
 
-    kk.update(tt1)
-
-    tt1.take(1000).map{x=>
-      if (kk.predictLabel(x._2, 0.5) == x._1) 1 else 0
-    }.sum.toDouble / 1000
-
-
-
-    //kk.update(ss)
-
-      tt.foreach{x=>
-        kk.update(x)
-        println(kk.nonZeroCoef)
-        //println(kk.globalW.getOrElse(1, 0D), kk.globalP.getOrElse(1, 0D), kk.globalN.getOrElse(1, 0D))
-      }
-
-    //println(kk.globalW)
+    tt.foreach{x=>
+      kk.update(x)
+      println(kk.bufferSummary(0.5))
+    }
 
     val gg = new Ftrl2().
       setAlpha(10).
       setBeta(10).
-      setL1(3).setL2(0).
-      setW(kk.globalW).setPerCoordinateLearningRate(kk.globalP, kk.globalN)
-
-    val pp = new Ftrl2().
-      setAlpha(10).
-      setBeta(10).
       setL1(3).setL2(0)
 
-    val ll = (0 to 0).map{x=>
-      val aa = (1 to 3200).map(x=> makeCoef(5, 100)) union (1 to 800).map(x=> makeCoef(0, 100000))
-      val bb = util.Random.shuffle(aa).toArray.
-        map(x=> nLogisticSample(1, mapToSparseVector(x, Int.MaxValue))).
-        flatten
-      val data = bb
-      data
-    }.toArray.flatten
 
-    ll.foreach{x=>
+    var i = 1
+    tt.reduce((a,b)=> a ++ b).collect.foreach{x=>
       gg.update(x)
-      pp.update(x)
-      println(gg.bufferSummary(0.5), "    ", pp.bufferSummary(0.5))
-      //println(gg.cumGradSq)
-      //println(Ftrl2.cumGradSquareApprox(gg.nCount, gg.pCount, gg.gMap, x._2))
-    }
-
-    val qq= new Ftrl2().
-      setAlpha(10).
-      setBeta(10).
-      setL1(3).setL2(0).
-      setW(pp.wMap).setPerCoordinateLearningRate(pp.pCount, pp.nCount)
-
-    ll.take(1000).foreach{x=>
-      qq.update(x)
-      //pp.update(x)
-      println(ll.map{x=> if (qq.predictLabel(x._2, 0.5) == x._1) 1 else 0}.sum.toDouble / 4000)
-
+      if (i % 1000 == 0) println(gg.bufferSummary(0.5))
+      i += 1
     }
 
 
+    /*
+        println(
+          tt1.take(1000).map{x=>
+            if (kk.predictLabel(x._2, 0.5) == x._1) 1 else 0
+          }.sum.toDouble / 1000
+
+        )
+    */
 
 
 

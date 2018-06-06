@@ -68,9 +68,10 @@ object StreamingFtrl3 {
   val bb = stream.map(record => record.value).
     flatMap{x=> parseFull(x).get.asInstanceOf[Map[String, Any]].get("payload")}//.repartition(1)
 
+  var i = 0
   val parse = bb.map{ x=>
 
-    var i = 0
+
     def mapToSparseVector(kv : Map[Int, Double], n:Int) = {
       val vec = SparseVector.zeros[Double](n)
       kv.keys.foreach(i => vec(i) = kv(i))
@@ -95,10 +96,27 @@ object StreamingFtrl3 {
 
   //var modelParam = new Ftrl().setAlpha(5).setBeta(1).setL1(1.5).setL2(0).save()
 
-  val model = new FtrlSpark()
+  val model = new FtrlSpark().
+    setAlpha(10).
+    setBeta(10).
+    setL1(3).setL2(0)
+
   val ss = parse.foreachRDD{ x=>
 
     model.update(x.map(x=> x._2))
+
+    val summary = model.bufferSummary(0.5)
+
+    val summaryString = Array(
+      "loss : " + "%.5f".format(summary._1),
+      "precision : " + "%.5f".format(summary._2),
+      "AUC : " + "%.5f".format(summary._3),
+      "Non-zero Coef : " + summary._4,
+      "Sample Count :" + model.i
+    )
+
+    println(summaryString.mkString(",  "))
+
 
     //println(model.nonZeroCoef)
 

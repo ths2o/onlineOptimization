@@ -1,3 +1,7 @@
+import breeze.linalg.SparseVector
+import org.apache.log4j.{Level, LogManager}
+import org.apache.spark.SparkContext
+
 /**
   * Created by Taehee on 2018. 5. 31..
   */
@@ -41,13 +45,19 @@ object AvazuTrain {
   def main(args: Array[String]): Unit = {
 
 
+    val sc = SparkContext.getOrCreate()
+    LogManager.getRootLogger().setLevel(Level.OFF)
+
+
     val reader = new GZIPInputStream(new FileInputStream("/Users/Taehee/Downloads/train.gz"))
     //val writer = new PrintStream(new FileOutputStream("~/stream/avazu/avazu-train", true))
     //val filename = "/Users/Taehee/Downloads/test"
 
     var i = 1
 
-    val model = new Ftrl().setAlpha(1).setBeta(1).setL1(2).setL2(0)
+    var dat : Array[(Int, SparseVector[Double])] = Array.empty
+
+    val model = new FtrlSpark().setAlpha(10).setBeta(10).setL1(2).setL2(0)
 
     for (line <- Source.fromInputStream(reader).getLines) {
 
@@ -73,7 +83,7 @@ object AvazuTrain {
 
       val y = d.click
       val x = Array(
-        //"1" + d.hour,
+        "1" + d.hour,
         "1d" + day,
         "1h" + hour,
         "2" + d.C1,
@@ -100,30 +110,43 @@ object AvazuTrain {
 
       val sparseX = FtrlRun.mapToSparseVector(xHash, Int.MaxValue)
 
-      model.update((y.toInt, sparseX))
+      dat = dat ++ Array((y.toInt, sparseX))
 
       i += 1
 
-      if (model.i % 1000 == 0) {
+      if (i % 100000 == 0) {
+        val datRdd = sc.parallelize(dat)
+
+        model.update(datRdd)
+
         val summary = model.bufferSummary(0.5)
         val summaryString = Array(
-          "loss          : " + "%.5f".format(summary._1),
-          "precision     : " + "%.5f".format(summary._2),
-          "AUC           : " + "%.5f".format(summary._3),
+          "loss : " + "%.5f".format(summary._1),
+          "precision : " + "%.5f".format(summary._2),
+          "AUC : " + "%.5f".format(summary._3),
           "Non-zero Coef : " + summary._4,
-          "i :" + model.i
+          "Sample Count :" + i
         )
+
         println(summaryString.mkString(",  "))
 
+        dat = Array.empty
+
+
         val oos = new ObjectOutputStream(new FileOutputStream("/Users/Taehee/Downloads/ftrlParam"))
-        oos.writeObject(model.save())
+        oos.writeObject(model.weight)
         oos.close
 
       }
 
 
+
+
+    }
+
+
       //writer.close()
 
     }
-  }
+
 }
