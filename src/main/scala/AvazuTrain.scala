@@ -2,11 +2,19 @@ import breeze.linalg.SparseVector
 import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.SparkContext
 
+import org.apache.hadoop.util.bloom.CountingBloomFilter
+import org.apache.hadoop.util.bloom.Key
+import org.apache.hadoop.util.hash.Hash.MURMUR_HASH
+
+
+
 /**
   * Created by Taehee on 2018. 5. 31..
   */
 
 object AvazuTrain {
+
+
 
 
 
@@ -57,7 +65,11 @@ object AvazuTrain {
 
     var dat : Array[(Int, SparseVector[Double])] = Array.empty
 
-    val model = new FtrlSpark().setAlpha(10).setBeta(10).setL1(2).setL2(0)
+    val model = new FtrlSpark().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
+
+    val aa = new CountingBloomFilter(100000, 7, MURMUR_HASH)
+
+
 
     for (line <- Source.fromInputStream(reader).getLines) {
 
@@ -88,14 +100,14 @@ object AvazuTrain {
         "1h" + hour,
         "2" + d.C1,
         "3" + d.banner_pos,
-        "4" + d.site_id,
-        "5" + d.site_domain,
+        //"4" + d.site_id,
+        //"5" + d.site_domain,
         "6" + d.site_category,
-        "7" + d.app_id,
-        "8" + d.app_domain,
+        //"7" + d.app_id,
+        //"8" + d.app_domain,
         "9" + d.app_category,
         "10" + d.device_type,
-        "11" + d.device_model,
+        //"11" + d.device_model,
         "12" + d.device_conn_type,
         "13" + d.C14,
         "14" + d.C15,
@@ -105,7 +117,15 @@ object AvazuTrain {
         "18" + d.C19,
         "19" + d.C20,
         "20" + d.C21
-      )
+      ).map { x =>
+        val k = new Key(x.getBytes())
+        aa.add(k)
+        val c = aa.approximateCount(k)
+        (x, if (c >= 14) true else false)
+      }.filter(x=> x._2).map(x=> x._1)
+
+
+
       val xHash = x.map(s => (hash(s), 1D)).toMap
 
       val sparseX = FtrlRun.mapToSparseVector(xHash, Int.MaxValue)
