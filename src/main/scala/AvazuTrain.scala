@@ -65,7 +65,7 @@ object AvazuTrain {
 
     var dat : Array[(Int, SparseVector[Double])] = Array.empty
 
-    val model = new FtrlSpark().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
+    val model = new FtrlSpark().setAlpha(10).setBeta(1).setL1(2).setL2(0)
 
     val aa = new CountingBloomFilter(100000, 7, MURMUR_HASH)
 
@@ -91,42 +91,44 @@ object AvazuTrain {
 
       val hour = if (i == 1)  "01" else d.hour.drop(6)
 
+      val (pubId, pubDomain, pubCategory) = if (d.app_id == "ecad2386"){
+
+        (d.site_id, d.site_domain, d.site_category)
+      } else {
+        (d.app_id, d.app_domain, d.app_category)
+      }
+
+      val userId = if(d.device_id == "a99f214a") d.device_ip + d.device_model else d.device_id
+
       //println(day, hour)
 
       val y = d.click
       val x = Array(
-        "1" + d.hour,
-        "1d" + day,
-        "1h" + hour,
-        "2" + d.C1,
-        "3" + d.banner_pos,
-        //"4" + d.site_id,
-        //"5" + d.site_domain,
-        "6" + d.site_category,
-        //"7" + d.app_id,
-        //"8" + d.app_domain,
-        "9" + d.app_category,
-        "10" + d.device_type,
-        //"11" + d.device_model,
-        "12" + d.device_conn_type,
-        "13" + d.C14,
-        "14" + d.C15,
-        "15" + d.C16,
-        "16" + d.C17,
-        "17" + d.C18,
-        "18" + d.C19,
-        "19" + d.C20,
-        "20" + d.C21
-      ).map { x =>
+        //"1" + d.hour,
+        "d-" + day,
+        "h-" + hour,
+        "c1-" + d.C1,
+        "bp-" + d.banner_pos,
+        "pId-" + pubId, "pd-" + pubDomain, "pc-" + pubCategory,
+        "uId-" + userId,
+        "up-" + userId + pubCategory,
+        "uAd-" + userId + d.C17,
+        "dt-" + d.device_type,
+        "dc-" + d.device_conn_type,
+        "c14-" + d.C14, "c15-" + d.C15, "c16-" + d.C16, "c17-" + d.C17,
+        "c18-" + d.C18, "c19-" + d.C19, "c20-" + d.C20, "c21-" + d.C21
+      )
+        /*
+        .map { x =>
         val k = new Key(x.getBytes())
         aa.add(k)
         val c = aa.approximateCount(k)
         (x, if (c >= 14) true else false)
       }.filter(x=> x._2).map(x=> x._1)
+*/
 
 
-
-      val xHash = x.map(s => (hash(s), 1D)).toMap
+      val xHash = x.map(s => (hash(s) % 10000000, 1D)).toMap
 
       val sparseX = FtrlRun.mapToSparseVector(xHash, Int.MaxValue)
 
