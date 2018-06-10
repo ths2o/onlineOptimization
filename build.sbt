@@ -23,7 +23,8 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-streaming" % "2.3.0" % "provided",
   "org.apache.spark" %% "spark-streaming-kafka-0-10" % "2.3.0",
 
-  "org.apache.spark" %% "spark-mllib" % "2.3.0" % "provided"
+  "org.apache.spark" %% "spark-mllib" % "2.3.0" % "provided",
+  "com.github.alexandrnikitin" %% "bloom-filter" % "latest.release"
 
 )
 assemblyMergeStrategy in assembly := {
