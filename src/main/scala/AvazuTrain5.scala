@@ -146,7 +146,7 @@ object AvazuTrain5 {
             }.flatten.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
 */
 
-            val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat //++ interaction1 ++ interaction2 //++ interaction3
+            val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat ++ interaction1 //++ interaction2 //++ interaction3
 
             val filteredFeat = feat
               .map { x =>
