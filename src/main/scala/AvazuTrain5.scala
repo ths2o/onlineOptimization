@@ -38,6 +38,12 @@ object AvazuTrain5 {
     ~/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
     --class AvazuTrain5 ~/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
 
+
+    ~/spark-2.3.0-bin-hadoop2.7/bin/spark-shell \
+    --executor-memory 10G \
+    --driver-memory 10G \
+    --jars ~/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
+
    */
 
 
@@ -65,7 +71,7 @@ object AvazuTrain5 {
     //val ind = spark.read.parquet("/Users/Taehee/Documents/project/avazu5").
     val ind = spark.read.parquet("./avazu/trainTest").
       select("hour").distinct.map(x=> x.getAs[Int]("hour")).
-      collect.sortBy(x=> x).drop(24).dropRight(24)
+      collect.sortBy(x=> x).dropRight(24).take(48)
 
 
     ind.foreach{x=>
