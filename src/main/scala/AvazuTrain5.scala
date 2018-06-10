@@ -35,6 +35,9 @@ object AvazuTrain5 {
     ~/Documents/project/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
     --class AvazuTrain ~/Documents/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
 
+    ~/spark-2.3.0-bin-hadoop2.7/bin/spark-submit \
+    --class AvazuTrain5 ~/project/onlineOptimization/target/scala-2.11/followTheRegularizedLeader-assembly-0.1.0-SNAPSHOT.jar
+
    */
 
 
@@ -71,7 +74,7 @@ object AvazuTrain5 {
       val train = spark.read.parquet(s"./avazu/trainTest/hour=$x").
         withColumn("hourCount", expr("case when hourCount is null then 0 else hourCount end")).
         withColumn("dayCount", expr("case when dayCount is null then 0 else dayCount end")).
-        withColumn("h", expr("substring(hour, 7,2)")).
+        withColumn("h", expr("substring(dateTime, 12, 2)")).
         sample(0.3)
 
       val t2 = train.mapPartitions{ part =>
@@ -108,7 +111,17 @@ object AvazuTrain5 {
             val impFeat = Array(
               ("imp" + impression.asInstanceOf[String])
             ).map(x=> (hash(x) % 100000 + 200000, 1D)).toMap
-/*
+
+            val interaction1 = userFeat.map{u=>
+              u._1.toString + h.toString
+            }.map(x=> (hash(x) % 1000000 + 200000, 1D)).toMap
+
+
+            val interaction2 = pubFeat.map{p=>
+              p.toString + h.toString
+            }.map(x=> (hash(x) % 1000000 + 2200000, 1D)).toMap
+
+            /*
             val interaction1 = userFeat.map{u=>
               pubFeat.map{p=>
                 u._1.toString + p._1.toString
@@ -128,7 +141,7 @@ object AvazuTrain5 {
             }.flatten.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
 */
 
-            val feat = userFeat ++ pubFeat ++ impFeat //++ interaction1 ++ interaction2 ++ interaction3
+            val feat = userFeat ++ pubFeat ++ impFeat ++ interaction1 ++ interaction2 //++ interaction3
 
             val filteredFeat = feat
               .map { x =>
