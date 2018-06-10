@@ -101,25 +101,25 @@ object AvazuTrain5 {
 
               ("userIdCtr" + a1),
               ("userIdHctr"+ a2)
-            ).map(x=> (hash(x) % 100000, 1D)).toMap
+            ).map(x=> (hash(x) % 1000000, 1D)).toMap
 
 
             val pubFeat = Array(
               ("pub" + pub.asInstanceOf[String])
-            ).map(x=> (hash(x) % 100000 + 100000, 1D)).toMap
+            ).map(x=> (hash(x) % 1000000 + 1000000, 1D)).toMap
 
             val impFeat = Array(
               ("imp" + impression.asInstanceOf[String])
-            ).map(x=> (hash(x) % 100000 + 200000, 1D)).toMap
+            ).map(x=> (hash(x) % 1000000 + 2000000, 1D)).toMap
 
             val interaction1 = userFeat.map{u=>
               u._1.toString + h.toString
-            }.map(x=> (hash(x) % 1000000 + 200000, 1D)).toMap
+            }.map(x=> (hash(x) % 1000000 + 3000000, 1D)).toMap
 
 
             val interaction2 = pubFeat.map{p=>
               p.toString + h.toString
-            }.map(x=> (hash(x) % 1000000 + 2200000, 1D)).toMap
+            }.map(x=> (hash(x) % 1000000 + 4000000, 1D)).toMap
 
             /*
             val interaction1 = userFeat.map{u=>
