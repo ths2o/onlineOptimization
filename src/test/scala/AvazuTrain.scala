@@ -1,13 +1,10 @@
 import breeze.linalg.SparseVector
+import org.apache.hadoop.util.bloom.CountingBloomFilter
+import org.apache.hadoop.util.hash.Hash.MURMUR_HASH
 import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.SparkContext
-import org.apache.hadoop.util.bloom.CountingBloomFilter
-import org.apache.hadoop.util.bloom.Key
-import org.apache.hadoop.util.hash.Hash.MURMUR_HASH
-import org.apache.spark.sql.{Row, SparkSession}
-
 import org.apache.spark.ml.linalg.Vectors
-
+import org.apache.spark.sql.{Row, SparkSession}
 
 
 /**
@@ -20,11 +17,10 @@ object AvazuTrain {
 
 
 
-  import java.io.{FileInputStream, FileOutputStream, PrintStream, ObjectInputStream, ObjectOutputStream}
+  import java.io.{FileInputStream, FileOutputStream, ObjectOutputStream}
   import java.util.zip.GZIPInputStream
 
   import scala.io.Source
-
   import scala.util.hashing.MurmurHash3
 
   /**

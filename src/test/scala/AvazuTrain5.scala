@@ -1,12 +1,11 @@
 import java.io.{FileOutputStream, ObjectOutputStream}
 
-import org.apache.hadoop.util.bloom.CountingBloomFilter
-import org.apache.hadoop.util.bloom.Key
+import org.apache.hadoop.util.bloom.{CountingBloomFilter, Key}
 import org.apache.hadoop.util.hash.Hash.MURMUR_HASH
 import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{Dataset, Row, SparkSession}
+import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.util.hashing.MurmurHash3
 

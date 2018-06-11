@@ -1,20 +1,9 @@
-import breeze.linalg.SparseVector
-import org.apache.hadoop.util.bloom.{CountingBloomFilter, Key}
-import org.apache.hadoop.util.hash.Hash.MURMUR_HASH
-import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
-import org.apache.spark.sql.functions._
-import java.io.{FileInputStream, FileOutputStream, ObjectOutputStream}
-import java.util.zip.GZIPInputStream
-
-import org.apache.spark.ml.clustering.{KMeans, LDA}
-import org.apache.spark.ml.evaluation.ClusteringEvaluator
+import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.feature.{HashingTF, Tokenizer}
-import org.apache.spark.mllib.clustering.OnlineLDAOptimizer
-import org.apache.spark.sql.catalyst.plans.logical.Window
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
-import scala.io.Source
 import scala.util.hashing.MurmurHash3
 
 

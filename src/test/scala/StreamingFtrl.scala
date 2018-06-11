@@ -7,9 +7,6 @@
 import breeze.linalg.SparseVector
 import org.apache.spark._
 import org.apache.spark.streaming._
-import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.streaming.dstream.DStream
-
 
 
 object StreamingFtrl {

@@ -1,10 +1,8 @@
 import breeze.linalg.SparseVector
-import org.apache.hadoop.util.bloom.{CountingBloomFilter, Key}
-import org.apache.hadoop.util.hash.Hash._
 import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.SparkContext
-import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Row, SparkSession}
 
 /**
   * Created by Taehee on 2018. 5. 31..
@@ -13,10 +11,8 @@ import org.apache.spark.sql.functions._
 object AvazuTest5 {
 
 
-  import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, PrintStream}
-  import java.util.zip.GZIPInputStream
+  import java.io.{FileInputStream, ObjectInputStream}
 
-  import scala.io.Source
   import scala.util.hashing.MurmurHash3
 
 

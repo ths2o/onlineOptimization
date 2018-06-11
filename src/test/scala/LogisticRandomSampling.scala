@@ -99,15 +99,14 @@ object LogisticRandomSampling {
     }
 
 
-    import java.io.FileOutputStream
-    import java.io.PrintStream
+    import java.io.{FileOutputStream, PrintStream}
 
 
     //writer.flush()
     (0 to 100000).foreach{x=>
 
-      val writer = new PrintStream(new FileOutputStream("/home/ths2o717/stream/test/test.txt", true))
-      //val writer = new PrintStream(new FileOutputStream("/Users/Taehee/Documents/project/kafka_2.11-1.1.0/test.txt", true))
+      //val writer = new PrintStream(new FileOutputStream("/home/ths2o717/stream/test/test.txt", true))
+      val writer = new PrintStream(new FileOutputStream("/Users/Taehee/Documents/project/kafka_2.11-1.1.0/test.txt", true))
       val sample = generateOne()(0)
       println(sample)
       writer.append(sample + "\n")

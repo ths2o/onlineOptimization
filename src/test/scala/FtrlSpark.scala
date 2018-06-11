@@ -1,8 +1,5 @@
 import breeze.linalg.SparseVector
-import org.apache.hadoop.util.bloom.CountingBloomFilter
-import org.apache.hadoop.util.hash.Hash._
 import org.apache.spark.rdd.RDD
-import org.apache.hadoop.util.bloom.Key
 
 /**
   * Created by Taehee on 2018. 6. 2..
