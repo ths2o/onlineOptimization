@@ -90,7 +90,7 @@ object StreamingFtrl2 {
 
   //var modelParam = new Ftrl().setAlpha(5).setBeta(1).setL1(1.5).setL2(0).save()
 
-  val model = new Ftrl().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
+  val model = new Ftrl2().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
   val ss = parse.foreachRDD{ x=>
 
     x.collect().foreach{t=>

@@ -97,9 +97,9 @@ object StreamingFtrl3 {
   //var modelParam = new Ftrl().setAlpha(5).setBeta(1).setL1(1.5).setL2(0).save()
 
   val model = new FtrlSpark().
-    setAlpha(10).
-    setBeta(10).
-    setL1(3).setL2(0).setValidationSampleSize(1D)
+    setAlpha(5).
+    setBeta(1).
+    setL1(1.5).setL2(0).setValidationSampleSize(1D)
 
   val ss = parse.foreachRDD{ x=>
 
