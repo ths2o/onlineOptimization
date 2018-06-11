@@ -183,13 +183,13 @@ object FtrlSpark {
         map{x=>
           val sum = x._2.map(x=> x._2).sum
           val count = x._2.map(x=> x._2).size
-          (x._1, sum)
+          (x._1, sum/count)
         }
       val c = (a3.toSeq ++ b3.toSeq).groupBy(x=> x._1).
         map{x=>
           val sum = x._2.map(x=> x._2).sum
           val count = x._2.map(x=> x._2).size
-          (x._1, sum)
+          (x._1, sum/count)
         }
       val d = (a4.toSeq ++ b4.toSeq).groupBy(x=> x._1).map{x=>
         val sum = x._2.map(x=> x._2).sum
