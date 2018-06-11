@@ -177,15 +177,24 @@ object FtrlSpark {
       val a = (a1.toSeq ++ b1.toSeq).groupBy(x=> x._1).map{x=>
         val sum = x._2.map(x=> x._2).sum
         val count = x._2.map(x=> x._2).size
-        (x._1, sum/8)
+        (x._1, sum/count)
       }
-      val b = (a2.toSeq ++ b2.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
-      val c = (a3.toSeq ++ b3.toSeq).groupBy(x=> x._1).map(x=> (x._1, x._2.map(x=> x._2).sum))
-
+      val b = (a2.toSeq ++ b2.toSeq).groupBy(x=> x._1).
+        map{x=>
+          val sum = x._2.map(x=> x._2).sum
+          val count = x._2.map(x=> x._2).size
+          (x._1, sum/count)
+        }
+      val c = (a3.toSeq ++ b3.toSeq).groupBy(x=> x._1).
+        map{x=>
+          val sum = x._2.map(x=> x._2).sum
+          val count = x._2.map(x=> x._2).size
+          (x._1, sum/count)
+        }
       val d = (a4.toSeq ++ b4.toSeq).groupBy(x=> x._1).map{x=>
         val sum = x._2.map(x=> x._2).sum
         val count = x._2.map(x=> x._2).size
-        (x._1, sum/8)
+        (x._1, sum/count)
       }
 
       (a, b, c, d)
