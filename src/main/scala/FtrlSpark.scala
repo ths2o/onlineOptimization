@@ -26,6 +26,7 @@ class FtrlSpark {
   var bufferSize = 1000
   var buffer : Array[(Int, Double, Double, Array[Int])] =Array.empty
 
+  var sampleRatio : Double = 0.01
 
   def setAlpha (alpha:Double) = {
     this.alpha = alpha
@@ -47,9 +48,14 @@ class FtrlSpark {
     this
   }
 
+  def setValidationSampleSize (ratio:Double) = {
+    this.sampleRatio = ratio
+    this
+  }
+
   def update(data:RDD[(Int, SparseVector[Double])]) ={
 
-    val fit = data.sample(false, 0.01).collect.map(x=> fitStat(x))
+    val fit = data.sample(false, sampleRatio).collect.map(x=> fitStat(x))
     //this.buffer = data.map{x=> fitStat(x)}.collect
     val model = FtrlSpark.ftrlPar(data, this.globalP, this.globalN, this.globalW, this.globalZ,
       alpha, beta, lambda, lambda2)
