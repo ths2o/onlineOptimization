@@ -67,7 +67,7 @@ object AvazuTrain5 {
 
 
 
-    val model = new FtrlSpark().setAlpha(5).setBeta(1).setL1(1.5).setL2(0)
+    val model = new FtrlSpark().setAlpha(5).setBeta(1).setL1(2).setL2(0)
 
     //val ind = spark.read.parquet("/Users/Taehee/Documents/project/avazu5").
     val ind = spark.read.parquet("./avazu/trainTest").
@@ -108,30 +108,30 @@ object AvazuTrain5 {
 
               ("userIdCtr" + a1),
               ("userIdHctr"+ a2)
-            ).map(x=> (hash(x) % 1000000, 1D)).toMap
+            ).map(x=> (hash(x), 1D)).toMap
 
 
             val pubFeat = Array(
               ("pub" + pub.asInstanceOf[String])
-            ).map(x=> (hash(x) % 1000000 + 1000000, 1D)).toMap
+            ).map(x=> (hash(x), 1D)).toMap
 
             val impFeat = Array(
               ("imp" + impression.asInstanceOf[String])
-            ).map(x=> (hash(x) % 1000000 + 2000000, 1D)).toMap
+            ).map(x=> (hash(x), 1D)).toMap
 
             val hourFeat = Array(
               ("hour" + h.asInstanceOf[String])
-            ).map(x=> (hash(x) % 1000000 + 3000000, 1D)).toMap
+            ).map(x=> (hash(x), 1D)).toMap
 
 
             val interaction1 = userFeat.map{u=>
               u._1.toString + h.toString
-            }.map(x=> (hash(x) % 1000000 + 4000000, 1D)).toMap
+            }.map(x=> (hash(x), 1D)).toMap
 
 
             val interaction2 = pubFeat.map{p=>
               p.toString + h.toString
-            }.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
+            }.map(x=> (hash(x), 1D)).toMap
 
             /*
             val interaction1 = userFeat.map{u=>
@@ -153,7 +153,7 @@ object AvazuTrain5 {
             }.flatten.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
 */
 
-            val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat ++ interaction1 //++ interaction2 //++ interaction3
+            val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat //++ interaction1 //++ interaction2 //++ interaction3
 
             val filteredFeat = feat
               .map { x =>
