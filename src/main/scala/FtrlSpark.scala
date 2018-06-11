@@ -155,7 +155,7 @@ object FtrlSpark {
         setAlpha(alpha).
         setBeta(beta).
         setL1(lambda).setL2(lambda2).
-        setW(globalW).setPerCoordinateLearningRate(localP,localN).setZ(globalZ)
+        setW(globalW).setPerCoordinateLearningRate(globalP,globalN).setZ(globalZ)
 
       part.toArray.foreach{x=>
 
@@ -183,13 +183,13 @@ object FtrlSpark {
         map{x=>
           val sum = x._2.map(x=> x._2).sum
           val count = x._2.map(x=> x._2).size
-          (x._1, sum/count)
+          (x._1, sum)
         }
       val c = (a3.toSeq ++ b3.toSeq).groupBy(x=> x._1).
         map{x=>
           val sum = x._2.map(x=> x._2).sum
           val count = x._2.map(x=> x._2).size
-          (x._1, sum/count)
+          (x._1, sum)
         }
       val d = (a4.toSeq ++ b4.toSeq).groupBy(x=> x._1).map{x=>
         val sum = x._2.map(x=> x._2).sum
