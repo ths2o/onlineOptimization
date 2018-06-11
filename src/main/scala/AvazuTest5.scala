@@ -67,30 +67,53 @@ object AvazuTest5 {
           val userFeat = Array(
 
             ("userIdCtr" + a1),
-            ("userIdHctr" + a2)
-          ).map(x => (hash(x) % 1000000, 1D)).toMap
+            ("userIdHctr"+ a2)
+          ).map(x=> (hash(x), 1D)).toMap
+
 
           val pubFeat = Array(
             ("pub" + pub.asInstanceOf[String])
-          ).map(x => (hash(x) % 1000000 + 1000000, 1D)).toMap
+          ).map(x=> (hash(x), 1D)).toMap
 
           val impFeat = Array(
             ("imp" + impression.asInstanceOf[String])
-          ).map(x => (hash(x) % 1000000 + 2000000, 1D)).toMap
+          ).map(x=> (hash(x), 1D)).toMap
 
           val hourFeat = Array(
             ("hour" + h.asInstanceOf[String])
-          ).map(x => (hash(x) % 1000000 + 3000000, 1D)).toMap
+          ).map(x=> (hash(x), 1D)).toMap
 
-          val interaction1 = userFeat.map { u =>
+
+          val interaction1 = userFeat.map{u=>
             u._1.toString + h.toString
-          }.map(x => (hash(x) % 1000000 + 4000000, 1D)).toMap
+          }.map(x=> (hash(x), 1D)).toMap
 
-          val interaction2 = pubFeat.map { p =>
+
+          val interaction2 = pubFeat.map{p=>
             p.toString + h.toString
-          }.map(x => (hash(x) % 1000000 + 5000000, 1D)).toMap
+          }.map(x=> (hash(x), 1D)).toMap
 
-          val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat ++ interaction1 //++ interaction2 //++ interaction3
+          /*
+          val interaction1 = userFeat.map{u=>
+            pubFeat.map{p=>
+              u._1.toString + p._1.toString
+            }
+          }.flatten.map(x=> (hash(x) % 1000000 + 3000000, 1D)).toMap
+
+          val interaction2 = userFeat.map{u=>
+            impFeat.map{i=>
+              u._1.toString + i._1.toString
+            }
+          }.flatten.map(x=> (hash(x) % 1000000 + 4000000, 1D)).toMap
+
+          val interaction3 = pubFeat.map{p=>
+            impFeat.map{i=>
+              p._1.toString + i._1.toString
+            }
+          }.flatten.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
+*/
+
+          val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat //++ interaction1 //++ interaction2 //++ interaction3
 
           val filteredFeat = feat
 
