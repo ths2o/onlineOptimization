@@ -133,27 +133,27 @@ object AvazuTrain5 {
               p.toString + h.toString
             }.map(x=> (hash(x), 1D)).toMap
 
-            /*
-            val interaction1 = userFeat.map{u=>
+
+            val interaction3 = userFeat.map{u=>
               pubFeat.map{p=>
                 u._1.toString + p._1.toString
               }
-            }.flatten.map(x=> (hash(x) % 1000000 + 3000000, 1D)).toMap
+            }.flatten.map(x=> (hash(x), 1D)).toMap
+            /*
+                        val interaction2 = userFeat.map{u=>
+                          impFeat.map{i=>
+                            u._1.toString + i._1.toString
+                          }
+                        }.flatten.map(x=> (hash(x) % 1000000 + 4000000, 1D)).toMap
 
-            val interaction2 = userFeat.map{u=>
-              impFeat.map{i=>
-                u._1.toString + i._1.toString
-              }
-            }.flatten.map(x=> (hash(x) % 1000000 + 4000000, 1D)).toMap
+                        val interaction3 = pubFeat.map{p=>
+                          impFeat.map{i=>
+                            p._1.toString + i._1.toString
+                          }
+                        }.flatten.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
+            */
 
-            val interaction3 = pubFeat.map{p=>
-              impFeat.map{i=>
-                p._1.toString + i._1.toString
-              }
-            }.flatten.map(x=> (hash(x) % 1000000 + 5000000, 1D)).toMap
-*/
-
-            val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat //++ interaction1 //++ interaction2 //++ interaction3
+            val feat = userFeat ++ pubFeat ++ impFeat ++ hourFeat ++ interaction1 ++ interaction2 ++ interaction3
 
             val filteredFeat = feat
               .map { x =>
