@@ -137,7 +137,7 @@ object AvazuTest5 {
 
     }
 
-    prob.map(x=> x._1 + "," + "%.8f".format(x._2)).saveAsTextFile("./avazu/sthSubmission")
+    prob.map(x=> x._1 + "," + "%.8f".format(x._2)).repartition(1).saveAsTextFile("./avazu/sthSubmission")
 /*
     val writer = new PrintStream(new FileOutputStream("./avazu/sthSubmission", true))
 
